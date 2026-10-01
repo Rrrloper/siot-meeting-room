@@ -1,0 +1,681 @@
+/* ============================================================
+   app.css — 앱 셸 + 화면별 스타일
+   components.css 다음에 로드한다. hex 리터럴 0개.
+
+   하단 탭 4개 · 홈은 시안 3a — 캐러셀·즐겨찾기·최근 사용·빈 공간 목록이 쌓인다.
+   기기 C안 — 제어 페이지의 기기는 SIOT 카드, 폭에 맞춰 재배치.
+   ============================================================ */
+
+
+/* ── 프로토타입 셸 ─────────────────────────────────────────── */
+
+:root{--frame-w:390px;--frame-h:844px;--statusbar-h:44px;--homebar-h:24px}
+
+html,body{height:100%}
+body{background:var(--bg);-webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+  overscroll-behavior:none}
+input,textarea{user-select:text;-webkit-user-select:text}
+
+.device{position:relative;width:100%;height:100dvh;
+  display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+.statusbar,.homebar{display:none}
+
+@media (min-width:768px){
+  body{background:var(--gray-100);display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:var(--sp-8) 0}
+  .device{width:var(--frame-w);height:var(--frame-h);flex:none;
+    border:1px solid var(--gray-300);border-radius:var(--r-frame);background:var(--surface)}
+  .statusbar{display:flex;align-items:center;justify-content:space-between;
+    flex:none;height:var(--statusbar-h);padding:0 var(--sp-6) 0 var(--sp-8);
+    background:var(--surface);font:600 15px/1 var(--font);
+    font-variant-numeric:tabular-nums;color:var(--text)}
+  .statusbar__right{display:flex;align-items:center;gap:var(--sp-1)}
+  .statusbar .icon{width:18px;height:18px;stroke-width:1.4}
+  .homebar{display:flex;align-items:center;justify-content:center;
+    flex:none;height:var(--homebar-h);background:var(--surface)}
+  .homebar::after{content:"";width:134px;height:5px;
+    background:var(--gray-900);border-radius:var(--r-full)}
+}
+
+
+/* ── 화면 스택 ─────────────────────────────────────────────── */
+
+.viewport{position:relative;flex:1;min-height:0;overflow:hidden}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;
+  background:var(--bg);visibility:hidden}
+.screen.is-active{visibility:visible;z-index:1}
+.screen.is-leaving{visibility:visible;z-index:0}
+.screen--board{background:var(--board)}
+
+.screen__body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;padding-bottom:var(--sp-6);scrollbar-width:none}
+.screen__body::-webkit-scrollbar{display:none}
+
+@keyframes pushIn  { from{transform:translateX(100%)}  to{transform:translateX(0)} }
+@keyframes pushOut { from{transform:translateX(0)}     to{transform:translateX(-24%)} }
+@keyframes popIn   { from{transform:translateX(-24%)}  to{transform:translateX(0)} }
+@keyframes popOut  { from{transform:translateX(0)}     to{transform:translateX(100%)} }
+.screen.anim-push-in  {animation:pushIn  var(--dur) var(--ease) both}
+.screen.anim-push-out {animation:pushOut var(--dur) var(--ease) both}
+.screen.anim-pop-in   {animation:popIn   var(--dur) var(--ease) both}
+.screen.anim-pop-out  {animation:popOut  var(--dur) var(--ease) both}
+
+.sheetlayer{z-index:10}
+.toast{z-index:20}
+@media (max-width:767px){
+  .fixedcta{padding-bottom:calc(var(--sp-3) + env(safe-area-inset-bottom,0px))}
+  .toast{bottom:calc(var(--sp-6) + env(safe-area-inset-bottom,0px))}
+}
+
+
+/* ── 공용 조각 ─────────────────────────────────────────────── */
+
+.pad{padding:0 var(--page-x)}
+.block{padding:var(--sp-5) var(--page-x) 0}
+.block--tight{padding-top:var(--sp-3)}
+.stackv{display:flex;flex-direction:column;gap:var(--sp-3)}
+.gap4{display:flex;flex-direction:column;gap:var(--sp-4)}
+.grow{flex:1}
+.groupt{font:600 12.5px/1.4 var(--font);color:var(--text-sub);padding:0 var(--page-x)}
+.sect{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3)}
+.sect__t{font:var(--t-sect) var(--font)}
+.sect__more{font:var(--t-sub) var(--font);color:var(--brand-600)}
+.note{font:var(--t-body) var(--font);color:var(--text-sub)}
+.hint{font:400 12.5px/1.5 var(--font);color:var(--text-sub);text-align:center;
+  padding:var(--sp-1) var(--page-x)}
+
+
+/* ── 앱바 ──────────────────────────────────────────────────── */
+
+.appbar{flex:none;display:flex;align-items:center;gap:var(--sp-2);
+  min-height:56px;padding:var(--sp-1) var(--page-x) var(--sp-3);background:var(--surface)}
+.appbar--line{border-bottom:1px solid var(--line)}
+.appbar__title{flex:1;min-width:0;font:var(--t-title) var(--font)}
+.appbar__title span{display:block;font:var(--t-sub) var(--font);
+  color:var(--text-sub);font-weight:400;margin-top:1px}
+.appbar__mid{flex:1;min-width:0;font:700 17px/1.4 var(--font);text-align:center}
+.appbar__trail{display:flex;align-items:center;gap:var(--sp-1);flex:none}
+.appbar .iconbtn{margin:0 -10px}
+
+
+/* ── 브랜드 (고객사 로고 · 관리자 페이지가 바꾼다) ─────────── */
+
+.brand{display:flex;align-items:center;gap:var(--sp-2);min-width:0;flex:1;--mark-h:30px}
+.brandmark{flex:none;height:var(--mark-h);width:auto;display:block}
+.brandmark--mark,.brandmark--lockup{display:block;overflow:hidden}
+.brandmark--mark img,.brandmark--lockup img{height:100%;width:auto;display:block;max-width:none}
+.brandmark--mark{width:calc(var(--mark-ratio,.657) * var(--mark-h))}
+.brand__txt{min-width:0}
+.brand__co{display:block;font:500 12px/1.35 var(--font);color:var(--text-sub)}
+.brand__site{display:block;font:var(--t-title) var(--font)}
+
+
+/* ── 하단 탭 4개 ───────────────────────────────────────────── */
+
+.tabbar{flex:none;display:flex;z-index:2;
+  background:var(--surface);border-top:1px solid var(--line);
+  padding:9px var(--sp-5) var(--sp-6)}
+.tabbar__item{flex:1;display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);
+  min-height:44px;color:var(--text-sub);
+  transition:color var(--dur-fast) var(--ease)}
+.tabbar__label{font:500 11.5px/1 var(--font)}
+.tabbar__item.is-active{color:var(--brand-active)}
+.tabbar__item.is-active .tabbar__label{font-weight:600}
+/* 가운데 체크인 버튼 — 떠 있는 검정 원형(떠 있는 것만 그림자) */
+.tabbar__scan{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  gap:var(--sp-1);min-height:44px;color:var(--text);font-weight:600}
+.tabbar__ball{position:absolute;top:-30px;width:58px;height:58px;border-radius:var(--r-full);
+  background:var(--gray-900);color:var(--gray-0);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 20px rgba(25,31,40,.28),0 0 0 5px var(--surface);
+  transition:background var(--dur-fast) var(--ease)}
+.tabbar__ball .icon{width:26px;height:26px}
+.tabbar__scan:active .tabbar__ball{background:var(--gray-700)}
+@media (max-width:767px){
+  .tabbar{padding-bottom:calc(var(--sp-6) + env(safe-area-inset-bottom,0px))}
+}
+
+
+/* ── 홈 (S-05) — 2026-09-09 「APP 홈화면 주황 시안」 적용 ──────
+   시안의 구조·레이아웃은 그대로 두고 브랜드 주황만 SIOT 정책에 맞췄다.
+   · 주황 채움 위 글자는 흰색이 아니라 잉크(--on-brand) — #FF9500+흰 = 대비 2.20
+   · 흰 바탕에 읽는 주황은 --brand-600 (#B45309, 대비 5.02)
+   · 한 화면에 주황 채움은 「지금 주목할 예약」 카드 하나뿐이다
+   ------------------------------------------------------------
+   1b 인디고 헤더와 하루 일정 바는 이 시안이 대체했다.
+   그 전용 토큰(--head-* · --now-500 · --r-ribbon)과 타임라인 리본 컴포넌트는
+   2026-09-09에 지웠다 — tokens.css 끝의 「의도적으로 뺀 것」 참고 */
+
+/* 시안 3a는 좌우 여백이 24px다. 앱의 다른 화면은 20px(--page-x)이므로
+   홈에만 --home-x 를 둔다 */
+#homeHead,#homeBody{--home-x:24px}
+
+.hbody{display:flex;flex-direction:column;gap:26px;padding-top:18px}
+
+.hhead{flex:none;padding:18px var(--home-x) 0;
+  display:flex;flex-direction:column;gap:6px}
+.hhead__r{display:flex;align-items:baseline;gap:5px}   /* 「9월 6일 (일)」 — web 「9/9 (수)」처럼 요일 앞을 띄운다 (66차) */
+.hhead__d{font:700 28px/1.2 var(--font);letter-spacing:-.6px}
+.hhead__w{font:600 16px/1.3 var(--font);color:var(--brand-600)}
+.hhead__s{font:500 14px/1.5 var(--font);color:var(--gray-600)}
+
+/* 오늘 예약 — 가로 캐러셀 */
+.tcar{display:flex;flex-direction:column;gap:10px}
+.tcar__t{display:flex;gap:12px;overflow-x:auto;padding:0 var(--home-x);
+  scroll-snap-type:x mandatory;scrollbar-width:none}
+.tcar__t::-webkit-scrollbar{display:none}
+.tcard{min-width:302px;scroll-snap-align:center;flex:none;
+  background:var(--gray-100);border-radius:22px;padding:18px;
+  display:flex;flex-direction:column;gap:12px;text-align:left}
+/* 오늘 예약이 한 건이면 넘길 것이 없다 — 폭을 채운다 */
+.tcar__t.is-one .tcard{min-width:0;flex:1}
+.tcard__k{display:flex;justify-content:space-between;gap:var(--sp-2);
+  font:600 12px/1.4 var(--font);color:var(--text-sub)}
+.tcard__n{font:700 19px/1.3 var(--font);color:var(--text)}
+.tcard__m{font:400 14px/1.4 var(--font);color:var(--gray-600)}
+.tcard__bar{height:6px;border-radius:3px;background:var(--gray-200);overflow:hidden}
+.tcard__bar>i{display:block;height:6px;border-radius:3px;background:var(--gray-500)}
+/* 지난 예약은 한 단계 물러난다 (시안 3a — 이름 회색, 진행바 진한 회색) */
+.tcard.is-done .tcard__n{color:var(--gray-700)}
+.tcard.is-done .tcard__m{color:var(--text-sub)}
+.tcard.is-done .tcard__bar{background:var(--gray-300)}
+
+/* 지금 주목할 예약 — 이 화면의 유일한 주황 채움 */
+.tcard--now{background:var(--brand-500);color:var(--on-brand)}
+.tcard--now .tcard__k{color:var(--on-brand);font-weight:700}
+.tcard--now .tcard__n{font-size:20px;color:var(--on-brand)}
+.tcard--now .tcard__m{color:var(--on-brand);opacity:.92}
+.tcard--now .tcard__bar{background:var(--on-brand-track)}
+.tcard--now .tcard__bar>i{background:var(--on-brand)}
+.tcard__pill{padding:4px 9px;border-radius:var(--r-full);
+  background:var(--on-brand-soft);white-space:nowrap}
+.tcard__kr{align-self:center;white-space:nowrap}
+.tcard__btns{display:flex;gap:8px}
+/* 시안은 높이를 padding으로 만든다 — min-height로 잡으면 글자가 위로 붙는다 */
+.tcard__b{flex:1;padding:11px;border-radius:12px;text-align:center;
+  font:700 14px/1.4 var(--font);
+  transition:background-color var(--dur-fast) var(--ease)}
+.tcard__b--fill{background:var(--surface);color:var(--brand-600)}
+.tcard__b--fill:active{background:var(--gray-100)}
+.tcard__b--ghost{background:var(--on-brand-soft);color:var(--on-brand);font-weight:600}
+.tcard__b--ghost:active{background:var(--on-brand-track)}
+.tdots{display:flex;gap:6px;justify-content:center}
+.tdots>span{width:6px;height:6px;border-radius:50%;background:var(--gray-300);display:block}
+.tdots>span.is-on{width:18px;border-radius:3px;background:var(--brand-500)}
+
+/* 즐겨찾기 · 최근 사용 — 가로 미니 카드 */
+.hsec{display:flex;flex-direction:column;gap:12px}
+.hsec__h{padding:0 var(--home-x);display:flex;align-items:baseline;
+  justify-content:space-between;gap:var(--sp-3)}
+.hsec__t{font:var(--t-sect) var(--font)}   /* 섹션 제목 토큰 — 탐색 .sect__t와 같다 (65차) */
+.hsec__m{font:600 13px/1.4 var(--font);color:var(--brand-600)}
+.hsec__c{font:400 13px/1.4 var(--font);color:var(--text-sub)}
+.hcards{display:flex;gap:10px;overflow-x:auto;padding:0 var(--home-x);
+  scrollbar-width:none}
+.hcards::-webkit-scrollbar{display:none}
+.mcard{position:relative;min-width:160px;flex:none;text-align:left;
+  border:1px solid var(--line);border-radius:var(--r-card);padding:12px;   /* 카드 모서리 토큰 — 내 예약 카드와 같다 (65차) */
+  display:flex;flex-direction:column;gap:8px;
+  transition:background-color var(--dur-fast) var(--ease)}
+.mcard:active{background:var(--pressed)}
+.mcard__th{height:80px;border-radius:var(--r-inner);
+  background:linear-gradient(160deg,var(--gray-200),var(--gray-300))}
+.mcard__n{font:600 15px/1.35 var(--font)}
+.mcard__m{font:400 12px/1.35 var(--font);color:var(--text-sub)}
+.mcard__a{font:600 12px/1.35 var(--font);color:var(--ok-700)}
+.mcard__a.is-busy{color:var(--text-sub)}
+
+/* 지금 비어있는 공간 — 섹션이 좌우 여백을 갖는다 (시안 3a) */
+.hsec--list{gap:14px;padding:0 var(--home-x)}
+/* 홈의 필터 칩은 시안 규격 — 공통 .chip보다 낮고 좌우가 넓다 */
+.hsec--list .chip{min-height:0;padding:8px 14px;font:500 13px/1.4 var(--font)}
+.hsec--list .chip.is-selected{font-weight:600}
+
+/* 행을 누르면 그 자리에서 펼쳐진다 */
+.slist{display:flex;flex-direction:column}
+.srow{display:flex;gap:14px;align-items:center;width:100%;text-align:left;
+  padding:14px 0;border-bottom:1px solid var(--gray-100);
+  transition:background-color var(--dur-fast) var(--ease)}
+.srow:last-child{border-bottom:0}
+.srow:active{background:var(--pressed)}
+.srow__th{width:52px;height:52px;flex:none;border-radius:var(--r-thumb);
+  background:linear-gradient(160deg,var(--gray-200),var(--gray-300))}
+.srow__m{flex:1;min-width:0}
+.srow__n{display:block;font:600 16px/1.4 var(--font)}
+.srow__s{display:block;font:var(--t-sub) var(--font);color:var(--text-sub);margin-top:2px}
+.srow__r{flex:none;text-align:right}
+.srow__r b{display:block;font:600 13px/1.4 var(--font);color:var(--ok-700)}
+.srow__r b.is-busy{color:var(--text-sub)}
+.srow__r span{display:block;font:400 12px/1.4 var(--font);color:var(--text-sub);margin-top:2px}
+
+.srow.is-open{flex-wrap:wrap;background:var(--brand-50);border-bottom:0;
+  border-radius:var(--r-card);padding:var(--sp-3) var(--sp-3)}
+.srow__x{width:100%;display:flex;flex-direction:column;gap:var(--sp-3);margin-top:var(--sp-3)}
+
+
+/* ── 탐색 (S-06) — 공간 그룹 · 시간 두 섹션 + 회의룸 카드 ─── */
+
+.cond{margin:0 var(--page-x);background:var(--gray-50);
+  border-radius:var(--r-card);overflow:hidden}
+.cs{padding:var(--sp-3) var(--sp-3)}
+.cs + .cs{border-top:1px solid var(--line)}
+.cs__k{display:flex;align-items:baseline;justify-content:space-between;
+  gap:var(--sp-2);margin-bottom:var(--sp-2)}
+.cs__k b{font:600 12px/1 var(--font);color:var(--text-sub)}
+.cs__k button{font:600 12.5px/1 var(--font);color:var(--brand-600);min-height:24px}
+
+/* 조건 패널 안의 칩은 흰 바탕 */
+.cond .chip{background:var(--surface);border:1px solid var(--line)}
+.cond .chip.is-selected{background:var(--gray-900);color:var(--gray-0);border-color:var(--gray-900)}
+.chip--ghost{background:transparent;border:1px solid var(--brand-300);
+  color:var(--brand-600);font-weight:600}
+.chip--ghost.is-selected{background:var(--brand-100);border-color:var(--brand-300);
+  color:var(--brand-600)}
+
+/* 시작 – 종료 두 필드 (A안 — 항상 보인다) */
+.tpick{display:flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-3)}
+.tpick__b{flex:1;min-width:0;text-align:left;background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:var(--r-thumb);padding:10px var(--sp-3);
+  transition:background-color var(--dur-fast) var(--ease)}
+.tpick__b:active{background:var(--pressed)}
+.tpick__b span{display:block;font:500 11.5px/1 var(--font);color:var(--text-sub)}
+.tpick__b b{display:block;font:700 19px/1.25 var(--mono);margin-top:4px}
+.tpick__b.is-on{border-color:var(--brand-500);background:var(--brand-100)}
+.tpick__b.is-on b{color:var(--brand-600)}
+.tpick__d{flex:none;font:600 15px/1 var(--font);color:var(--text-dim)}
+
+/* 회의룸 카드 — 이미지 · 이름 · 위치 */
+.rooms{padding:0 var(--page-x);display:flex;flex-direction:column;gap:11px}
+.roomcard{position:relative;display:flex;width:100%;text-align:left;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  transition:background-color var(--dur-fast) var(--ease)}
+.roomcard:active{background:var(--gray-25)}
+.roomcard__img{width:100px;flex:none;aspect-ratio:1/1;position:relative;
+  display:flex;align-items:flex-end;padding:7px;
+  background:linear-gradient(160deg,var(--gray-200),var(--gray-300))}
+.roomcard__img span{font:600 10px/1 var(--font);color:var(--gray-700);
+  background:rgba(255,255,255,.85);padding:3px 5px;border-radius:var(--r-mini);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.roomcard__b{flex:1;min-width:0;padding:var(--sp-3) var(--sp-4);
+  display:flex;flex-direction:column;justify-content:center;gap:2px}
+.roomcard__n{font:700 16px/1.35 var(--font)}
+.roomcard__loc{font:500 12.5px/1.4 var(--font);color:var(--gray-700)}
+.roomcard__m{font:400 12px/1.4 var(--font);color:var(--text-sub);margin-top:1px}
+
+/* 30분 단위 시각 시트 */
+.timegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.timegrid button{padding:12px 0;text-align:center;border-radius:var(--r-thumb);
+  background:var(--gray-100);font:500 14px/1 var(--mono);color:var(--gray-700)}
+.timegrid button.is-selected{background:var(--brand-500);color:var(--on-brand);font-weight:700}
+.timegrid button.is-disabled{background:var(--gray-25);color:var(--text-dim);pointer-events:none}
+.segment{display:flex;gap:var(--sp-2);padding-bottom:var(--sp-3)}
+.segment .chip{flex:1;justify-content:center}
+
+/* 층별 현황 */
+.floorbox{margin:var(--sp-4) var(--page-x) 0;padding:var(--sp-4);
+  border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface)}
+.floorbox__t{font:var(--t-body) var(--font)}
+.floorbox__rows{display:flex;gap:var(--sp-5);margin-top:var(--sp-2);
+  font:var(--t-sub) var(--font);color:var(--text-sub);font-variant-numeric:tabular-nums}
+
+
+/* ── 제어 페이지 (S-14) — 히어로 + 씬 + SIOT 기기 카드 ────── */
+
+/* 상단은 낮게 — 이름 + 상태 한 줄 · 정보 + 시간 한 줄 · 진행 바 · 연장/퇴실 (2026-09-29 69차 · 예전 이름 26px + 시각 줄 따로) */
+.hero{flex:none;background:var(--surface);padding:0 var(--page-x) var(--sp-3);
+  display:flex;flex-direction:column;gap:var(--sp-2);border-bottom:1px solid var(--line)}
+.hero__top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap}
+.hero__name{font:700 20px/1.3 var(--font)}
+.hero__meta{font:var(--t-sub) var(--font);color:var(--text-sub)}
+.hero .elapsed{margin-top:0}
+/* 30분 연장 · 퇴실하기는 진행 바 아래 한 줄(.btnrow) — 57차에 53차 이전 자리로 되돌림.
+   뒤 예약이 있어 연장이 막히면 흐리게만 두고 누를 수는 있다(누르면 이유 토스트) */
+.btn.is-blocked,.tcard__b.is-blocked{opacity:.4}
+
+/* 자동화 버튼 — 기기 섹션 안 카드 위 한 줄 알약. 실행 중이면 아래 진행선, 끝나면 잠깐 브랜드 옅은 바탕 (2026-09-29 69차) */
+.autorow{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.autobtn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 16px;
+  border:.5px solid var(--dev-line);border-radius:var(--r-full);background:var(--surface);box-shadow:var(--dev-shadow);
+  font:600 13.5px/1 var(--font);color:var(--text);transition:background-color var(--dur-fast) var(--ease)}
+.autobtn:active{background:var(--pressed)}
+.autobtn .icon{width:16px;height:16px;color:var(--dev)}
+.autobtn__bar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--dev)}
+.autobtn.is-running .autobtn__bar{animation:sceneRun 1.6s linear forwards}
+.autobtn.is-done{background:var(--dev-tint);border-color:var(--dev)}
+.autobtn.is-locked{opacity:.42;pointer-events:none}
+@keyframes sceneRun{from{width:0}to{width:100%}}
+
+.devwrap{padding:var(--sp-4) var(--page-x) 0;display:flex;flex-direction:column;gap:var(--sp-3)}
+
+/* 입실 QR 블록 — 제어 페이지 안에 산다 */
+.qrcard{background:var(--surface);border:.5px solid var(--brand-300);
+  border-radius:var(--r-dev);box-shadow:var(--dev-shadow);
+  padding:var(--sp-4) var(--sp-3);display:flex;flex-direction:column;
+  align-items:center;gap:var(--sp-2)}
+.qrcard__h{width:100%;display:flex;align-items:center;justify-content:space-between}
+.qr{width:198px;height:198px;padding:10px;background:var(--gray-0);
+  border:1px solid var(--line);border-radius:var(--r-thumb);
+  display:grid;grid-template-columns:repeat(21,1fr);grid-auto-rows:1fr}
+.qr i{display:block}
+.qr i.is-m{background:var(--gray-900)}
+.qr.is-expired{opacity:.2}
+.qrcard__code{font:600 15px/1 var(--mono);letter-spacing:.02em}
+.qrcard__meta{font:var(--t-sub) var(--font);color:var(--text-sub);
+  font-variant-numeric:tabular-nums}
+
+.lognav{display:flex;align-items:center;justify-content:space-between;width:100%;   /* 버튼은 폭이 저절로 늘지 않는다 — 윗줄이 반만 그어지던 것 (69차) */
+  padding:var(--sp-4) var(--page-x);margin-top:var(--sp-2);
+  border-top:1px solid var(--line);font:600 14px/1 var(--font)}
+.lognav .icon{color:var(--text-dim)}
+
+
+/* ── 제어 이력 (S-14b) ─────────────────────────────────────── */
+
+.logrow{display:flex;align-items:center;gap:var(--sp-3);width:100%;
+  padding:var(--sp-3) 0;border-bottom:1px solid var(--line);text-align:left}
+.logrow__t{width:46px;flex:none;font:500 13px/1 var(--mono);color:var(--text-sub)}
+.logrow__m{flex:1;min-width:0}
+.logrow__w{display:block;font:var(--t-body) var(--font)}
+.logrow__who{display:block;font:var(--t-sub) var(--font);color:var(--text-sub);margin-top:1px}
+.logrow__r{flex:none;font:600 13px/1 var(--font);color:var(--text-sub)}
+.logrow__r.is-fail{color:var(--danger-700)}
+
+
+/* ── 예약 상세 (S-15) ──────────────────────────────────────── */
+
+.rsvhead{padding:var(--sp-3) var(--page-x) 0}
+.rsvhead__name{font:var(--t-display) var(--font);margin-top:var(--sp-1)}
+.deflist{border-top:1px solid var(--line)}
+.defrow{display:flex;gap:var(--sp-4);padding:var(--sp-3) 0;border-bottom:1px solid var(--line)}
+.defrow__k{flex:none;width:80px;font:var(--t-body) var(--font);color:var(--text-sub)}
+.defrow__v{flex:1;min-width:0;font:var(--t-body) var(--font);font-variant-numeric:tabular-nums}
+
+
+/* ── 나 (S-18) ─────────────────────────────────────────────── */
+
+.profile{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--page-x) 0}
+.avatar{width:48px;height:48px;flex:none;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--brand-100);color:var(--brand-600);font:700 18px/1 var(--font)}
+.profile__n{display:block;font:700 18px/1.35 var(--font)}
+.profile__m{display:block;font:var(--t-sub) var(--font);color:var(--text-sub)}
+
+
+.rowlist{border-top:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:var(--sp-3);width:100%;
+  min-height:54px;padding:var(--sp-3) 0;text-align:left;
+  border-bottom:1px solid var(--line);
+  transition:background-color var(--dur-fast) var(--ease)}
+.row:active{background:var(--pressed)}
+.row__main{flex:1;min-width:0}
+.row__title{display:block;font:var(--t-body) var(--font)}
+.row__sub{display:block;font:var(--t-sub) var(--font);color:var(--text-sub);margin-top:2px}
+.row__trail{flex:none;display:flex;align-items:center;gap:var(--sp-2);color:var(--text-dim)}
+.row__value{font:var(--t-sub) var(--font);color:var(--text-sub)}
+
+
+/* ── 알림 (S-20 설정 · S-21 알림함) ───────────────────────── */
+
+.setrow{display:flex;align-items:center;gap:var(--sp-3);
+  padding:var(--sp-3) 0;border-bottom:1px solid var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow__n{flex:1;min-width:0;font:var(--t-body) var(--font)}
+.setrow__s{display:block;margin-top:2px;font:var(--t-sub) var(--font);color:var(--text-sub)}   /* 리마인드 시점 — web 설정 값 (70차) */
+.block.is-off .setrow{opacity:.4}   /* 이 폰에서 알림 받기를 끄면 종류별은 흐리게 (70차) */
+
+.noti{display:flex;flex-direction:column;gap:var(--sp-1);width:100%;text-align:left;
+  padding:var(--sp-4) 0;border-bottom:1px solid var(--line);
+  transition:background-color var(--dur-fast) var(--ease)}
+.noti:active{background:var(--pressed)}
+.noti__t{font:var(--t-body) var(--font)}
+.noti.is-unread .noti__t{font-weight:600}
+.noti__b{font:var(--t-sub) var(--font);color:var(--text-sub);white-space:pre-line}   /* web 알림 문안의 줄바꿈 그대로 (66차) */
+.noti__at{font:var(--t-sub) var(--mono);color:var(--text-dim)}
+
+
+/* ── 전자명판 (S-22 · S-23) ────────────────────────────────── */
+
+/* ── 입력 ──────────────────────────────────────────────────── */
+
+.field{margin-top:var(--sp-3)}
+.textinput{width:100%;min-height:50px;padding:var(--sp-3) var(--sp-4);
+  background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:var(--r-thumb);font:var(--t-body) var(--font)}
+.textinput::placeholder{color:var(--text-dim)}
+.searchinput{flex:1;min-width:0;min-height:44px;padding:0 var(--sp-3);
+  background:var(--gray-100);border:0;border-radius:var(--r-thumb);
+  font:var(--t-body) var(--font)}
+.searchinput::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+
+
+/* ── 로그인 · 온보딩 (S-01 · S-02 · S-04) ─────────────────── */
+
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--sp-2);animation:fade var(--dur) var(--ease)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.splash__mark{font:800 30px/1 var(--font);letter-spacing:-.03em;color:var(--brand-600)}
+.splash__by{font:var(--t-sub) var(--font);color:var(--text-sub)}
+
+.login{padding:var(--sp-10) var(--page-x) 0;display:flex;flex-direction:column}
+.login__logo{font:800 24px/1 var(--font);letter-spacing:-.03em;color:var(--brand-600)}
+.login__title{font:var(--t-display) var(--font);margin-top:var(--sp-2)}
+.login__field{position:relative;margin-top:var(--sp-3)}
+.login__eye{position:absolute;right:4px;top:50%;transform:translateY(-50%)}
+.login__err{margin-top:var(--sp-2);font:var(--t-sub) var(--font);color:var(--danger-700)}
+.login__check{display:flex;align-items:center;gap:var(--sp-2);
+  margin-top:var(--sp-4);font:var(--t-body) var(--font)}
+.login__actions{margin-top:var(--sp-6);display:flex;flex-direction:column;gap:var(--sp-2)}
+
+/* 회사코드·가입·승인 대기·비밀번호 변경 (S-25 ~ S-28) —
+   로그인과 같은 블록을 쓰고 설명 한 줄과 라벨 붙은 입력만 더한다 */
+.login__lede{margin-top:var(--sp-2);font:var(--t-body) var(--font);color:var(--text-sub)}
+.formlist{padding:var(--sp-5) var(--page-x) 0;display:flex;flex-direction:column;gap:var(--sp-4)}
+.formrow{display:flex;flex-direction:column;gap:var(--sp-2)}
+.formrow__n{font:var(--t-body-b) var(--font)}
+.formrow__h{font:var(--t-sub) var(--font);color:var(--text-sub)}
+.waitrow{display:flex;align-items:baseline;gap:var(--sp-4);
+  padding-bottom:var(--sp-4);border-bottom:1px solid var(--gray-100)}
+.waitrow__k{flex:none;width:88px;font:var(--t-sub) var(--font);color:var(--text-sub)}
+.waitrow__v{flex:1;min-width:0;font:var(--t-body) var(--font);word-break:break-all}
+.waitrow--why{flex-direction:column;gap:var(--sp-2)}
+.waitrow--why .waitrow__v{width:100%}
+
+.permlist{padding:var(--sp-4) var(--page-x) 0;display:flex;flex-direction:column;gap:var(--sp-5)}
+.permrow{display:flex;gap:var(--sp-3);align-items:flex-start}
+.permrow .icon{color:var(--brand-600);margin-top:2px}
+.permrow__n{display:block;font:var(--t-body-b) var(--font)}
+.permrow__w{display:block;font:var(--t-sub) var(--font);color:var(--text-sub);margin-top:2px}
+
+
+/* ── 시간 확정 시트 ────────────────────────────────────────── */
+
+.pick{text-align:center;padding:var(--sp-2) 0}
+.pick__t{font:700 30px/1.2 var(--font);font-variant-numeric:tabular-nums}
+.pick__d{font:500 13px/1.6 var(--font);color:var(--text-sub);margin-top:3px}
+.sheetrow{display:flex;align-items:center;justify-content:space-between;
+  font:var(--t-body-b) var(--font)}
+.slotgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.slot{padding:11px 0;text-align:center;border-radius:var(--r-inner);
+  background:var(--gray-100);font:500 13px/1 var(--font);color:var(--gray-700);
+  font-variant-numeric:tabular-nums}
+.slot.is-booked{background:var(--gray-25);color:var(--text-dim);pointer-events:none}
+.slot.is-selected{background:var(--brand-500);color:var(--on-brand);font-weight:600}
+
+
+/* ── 프로토타입 도구 (§18) — 프레임 바깥. 전부 기본 꺼짐 ──── */
+
+.tools{display:none}
+@media (min-width:768px){
+  body{padding-left:300px}
+  .tools{display:block;position:fixed;left:0;top:0;bottom:0;width:272px;
+    overflow-y:auto;padding:var(--sp-5) var(--sp-4) var(--sp-8);
+    background:var(--gray-900);color:var(--gray-0);z-index:50;scrollbar-width:thin}
+  .tools__h{font:700 14px/1 var(--font);margin-bottom:var(--sp-4)}
+  .tools__g{margin-bottom:var(--sp-4)}
+  .tools__k{display:block;font:500 11px/1 var(--font);
+    color:var(--gray-400);margin-bottom:var(--sp-2)}
+  .tools__b{display:inline-block;margin:0 4px 4px 0;padding:6px 10px;
+    border-radius:var(--r-full);background:var(--gray-700);color:var(--gray-0);
+    font:500 12px/1.3 var(--font)}
+  .tools__b.is-on{background:var(--brand-500);color:var(--on-brand);font-weight:600}
+  .tools__run{display:block;width:100%;padding:10px;border-radius:var(--r-thumb);
+    background:var(--brand-500);color:var(--on-brand);font:600 13px/1.3 var(--font);
+    text-align:center}
+  .tools__run.is-on{background:var(--danger-500)}
+  .tools__note{font:400 11px/1.5 var(--font);color:var(--gray-400);margin-top:var(--sp-4)}
+}
+
+.idlabel{position:absolute;left:var(--sp-2);top:var(--sp-2);z-index:40;
+  padding:3px 7px;border-radius:var(--r-mini);background:var(--gray-900);color:var(--gray-0);
+  font:600 11px/1.4 var(--mono)}
+.specovl{position:absolute;left:var(--sp-3);right:var(--sp-3);bottom:var(--sp-3);z-index:40;
+  padding:var(--sp-3);border-radius:var(--r-thumb);
+  background:var(--gray-900);color:var(--gray-0)}
+.specovl__h{font:600 11px/1.4 var(--mono);color:var(--brand-300)}
+.specovl__l{font:400 12px/1.5 var(--font);margin-top:3px}
+.is-gray .device{filter:grayscale(1)}
+
+
+/* ── S-12 QR 체크인 — 카메라 + 주황 프레임 + 코드 입력 시트 ─────── */
+.screen--scan{background:#0B0E13;color:var(--gray-0)}
+.scan__cam{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,#2A313D 0%,#0B0E13 72%)}
+.appbar--scan{position:relative;background:transparent;border-bottom:0;color:var(--gray-0)}
+.appbar--scan .appbar__title{color:var(--gray-0)}
+.iconbtn--scan{background:rgba(255,255,255,.12);color:var(--gray-0)}
+.scan__frame{position:absolute;left:50%;top:42%;width:240px;height:240px;transform:translate(-50%,-50%)}
+.scan__frame i{position:absolute;width:34px;height:34px;border:4px solid var(--brand-500)}
+.scan__frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+.scan__frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+.scan__frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 10px}
+.scan__frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.scan__frame.is-busy i{border-color:var(--gray-0)}
+.scan__hint{position:absolute;left:0;right:0;top:61%;margin:0;text-align:center;font:500 14px/1.5 var(--font);color:rgba(255,255,255,.8);padding:0 var(--sp-6)}
+.scan__hint.is-bad{color:#FF8A94}
+.scan__sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);color:var(--text);
+  border-radius:var(--r-sheet) var(--r-sheet) 0 0;padding:var(--sp-6) var(--sp-6) calc(var(--sp-8) + env(safe-area-inset-bottom,0px))}
+.scan__t{display:block;font:var(--t-title) var(--font)}
+.scan__s{margin:4px 0 var(--sp-4);font:500 13px/1.4 var(--font);color:var(--text-sub)}
+.codebox{display:flex;gap:6px;position:relative}
+.codebox i{flex:1;height:52px;border:1px solid var(--line);border-radius:var(--r-thumb);display:flex;align-items:center;justify-content:center;
+  font:800 22px/1 var(--font);font-style:normal;color:var(--text);background:var(--gray-0)}
+.codebox i.is-on{border-color:var(--brand-500)}
+.codebox input{position:absolute;inset:0;opacity:0;font-size:16px}
+.scan__ok{display:flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-4);font:600 13px/1.4 var(--font);color:var(--ok-700,#1F8F55)}
+
+
+/* 입실 전 잠긴 기기 타일 — 흐리게 + 자물쇠 (2026-09-23) */
+.dcard.is-locked{position:relative;opacity:.55}
+.dcard.is-locked .dcard__lock{position:absolute;right:12px;top:12px;color:var(--text-sub)}
+.dcard.is-locked .dcard__lock .icon{width:16px;height:16px}
+
+
+/* 탐색 조건 — 날짜·시작·종료 3버튼 + 날짜 달력 (2026-09-23) */
+.fpill{display:flex;gap:8px}
+.fpill button{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-thumb);
+  padding:10px 12px;text-align:left}
+.fpill button:active{background:var(--gray-50)}
+.fpill span{display:block;font:500 11.5px/1.3 var(--font);color:var(--text-sub)}
+.fpill b{display:block;font:700 15px/1.35 var(--font);margin-top:2px;font-variant-numeric:tabular-nums}
+.cal__h{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);
+  font:700 14px/1.4 var(--font)}
+.cal__nav{width:30px;height:30px;border:1px solid var(--line);border-radius:var(--r-inner);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;color:var(--text-sub)}
+.cal__nav.is-disabled{opacity:.35;pointer-events:none}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0;text-align:center}
+.cal__w{font:500 11.5px/1 var(--font);color:var(--text-sub);padding-bottom:var(--sp-2)}
+.cal__w.is-sun{color:var(--danger-700,#D63C48)}
+.cal__d{height:40px;display:flex;align-items:center;justify-content:center;border:0;background:none;
+  border-radius:var(--r-inner);font:500 14px/1 var(--font);color:var(--text);font-variant-numeric:tabular-nums}
+.cal__d.is-sun{color:var(--danger-700,#D63C48)}
+.cal__d.is-out{color:var(--gray-400);pointer-events:none}
+.cal__d.is-today{box-shadow:inset 0 0 0 1px var(--brand-500)}
+.cal__d.is-on{background:var(--gray-900);color:var(--gray-0);font-weight:700}
+.cal__d.is-blank{visibility:hidden}
+
+/* web 예약 규칙에 막힌 회의실 줄 — 숨기지 않고 흐리게, 누르면 이유 (66차) */
+.srow.is-blocked{opacity:.45}
+
+/* 공간 그룹 칩 — 트리를 단계별 줄로. 하위 줄은 조금 들여 쓴다 (2026-09-29 69차) */
+.chipstack{display:flex;flex-direction:column;gap:var(--sp-2)}
+.chiprow--sub{padding-left:var(--sp-3)}
+
+/* ── 플랫폼 계정 — 로그인 · 가입 · 회사 추가 · 회사 전환 (2026-09-30 72차) ── */
+
+/* 로그인 — 간편 로그인 4종이 먼저, 휴대폰 번호는 한 단계 아래. 버튼 면 색은 각 사 가이드 값 */
+.login--sub{padding-top:var(--sp-2)}
+.social{display:flex;flex-direction:column;gap:var(--sp-2);margin-top:var(--sp-8)}
+.social__b{position:relative}
+.social__i{position:absolute;left:18px;top:50%;width:20px;height:20px;transform:translateY(-50%)}
+.social__b--kakao{background:#FEE500;color:rgba(0,0,0,.85)}
+.social__b--naver{background:#03C75A;color:#FFFFFF}
+.social__b--apple{background:#000000;color:#FFFFFF}
+.social__b--google{background:var(--surface);color:var(--text);border:1px solid var(--line-strong)}
+.social__b:active{filter:brightness(.94)}
+.login__or{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-5) 0;font:var(--t-sub) var(--font);color:var(--text-dim)}
+.login__or::before,.login__or::after{content:"";flex:1;height:1px;background:var(--line)}
+.login__links{display:flex;justify-content:center;align-items:center;gap:var(--sp-1);margin-top:var(--sp-4);color:var(--text-dim)}
+.login__link{padding:var(--sp-2);border:0;background:none;font:500 13.5px/1.4 var(--font);color:var(--text-sub);cursor:pointer}
+.login__link--c{display:block;margin:var(--sp-3) auto 0}
+
+/* 약관 · 정보 제공 동의 — 둥근 체크 */
+.agree{display:flex;flex-direction:column;padding-top:var(--sp-1)}
+.agree__row{display:flex;align-items:center;gap:var(--sp-3);width:100%;min-height:44px;padding:0;border:0;background:none;
+  text-align:left;font:var(--t-body) var(--font);color:var(--text);cursor:pointer}
+.agree__row--all{font-weight:600;border-bottom:1px solid var(--line);margin-bottom:var(--sp-1)}
+.agree__ck{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;color:transparent}
+.agree__ck .icon{width:14px;height:14px;stroke-width:2.4}
+.agree__row.is-on .agree__ck{background:var(--brand-500);border-color:var(--brand-500);color:var(--on-brand)}
+.agree__req{font:600 12.5px/1 var(--font);color:var(--brand-600);margin-right:6px}
+
+/* 회사 추가 — 확인된 회사 카드 · 부서 · 직급 고르기 */
+.cocard{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-4);
+  background:var(--gray-50);border-radius:var(--r-thumb)}
+.cocard__n{display:block;font:var(--t-body-b) var(--font)}
+.cocard__s{display:block;font:var(--t-sub) var(--font);color:var(--text-sub);font-variant-numeric:tabular-nums}
+.pickfield{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);width:100%;min-height:50px;
+  padding:var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:var(--r-thumb);font:var(--t-body) var(--font);color:var(--text);text-align:left;cursor:pointer}
+.pickfield.is-empty{color:var(--text-dim)}
+.pickfield .icon{color:var(--text-sub)}
+.picklist{display:flex;flex-direction:column}
+.pickrow{display:flex;align-items:center;gap:var(--sp-2);width:100%;min-height:48px;padding-right:0;border:0;
+  border-bottom:1px solid var(--gray-100);background:none;text-align:left;font:var(--t-body) var(--font);color:var(--text);cursor:pointer}
+.pickrow.is-top{font-weight:600}
+.pickrow.is-on{color:var(--brand-600);font-weight:600}
+.pickrow .icon{margin-left:auto;color:var(--brand-600)}
+
+/* 홈 헤더 — 회사 이름 ▾ */
+.cosw{display:inline-flex;align-items:center;gap:2px;align-self:flex-start;margin:0 0 0 -4px;padding:2px 4px;border:0;
+  background:none;border-radius:var(--r-mini);font:700 15px/1.4 var(--font);color:var(--text);cursor:pointer}
+.cosw .icon{width:18px;height:18px;color:var(--text-sub)}
+.cosw:active{background:var(--pressed)}
+
+/* 회사 시트 */
+.corow{display:flex;align-items:center;gap:var(--sp-3);width:100%;min-height:60px;padding:var(--sp-2) 0;border:0;
+  border-bottom:1px solid var(--gray-100);background:none;text-align:left;cursor:pointer}
+.corow__n{display:block;font:var(--t-body-b) var(--font);color:var(--text)}
+.corow__s{display:block;font:var(--t-sub) var(--font);color:var(--text-sub)}
+.corow.is-on .corow__n{color:var(--brand-600)}
+.corow .icon{flex:none;color:var(--brand-600)}
+.corow--add{border-bottom:0}
+.corow--add .icon{color:var(--text-sub)}
+
+/* 회사 없는 홈 — 승인 대기 · 반려 카드 */
+.jcard{margin:0 var(--home-x);padding:var(--sp-5);border:1px solid var(--line);border-radius:var(--r-card);
+  display:flex;flex-direction:column;gap:var(--sp-1)}
+.jcard__co{font:var(--t-sub) var(--font);color:var(--text-sub)}
+.jcard__t{font:var(--t-sect) var(--font)}
+.jcard__s{font:var(--t-body) var(--font);color:var(--text-sub)}
+.jcard .waitlist{margin-top:var(--sp-3)}
+.jcard .btn{margin-top:var(--sp-3)}
+.waitlist{display:flex;flex-direction:column;gap:var(--sp-3)}
+.waitlist .waitrow{padding-bottom:var(--sp-3)}
+.waitlist + .waitlist{margin-top:var(--sp-3)}
+.empty__title{font:var(--t-sect) var(--font);color:var(--text)}
+.linkbtn{align-self:center;padding:var(--sp-2);border:0;background:none;font:600 14px/1.4 var(--font);color:var(--brand-600);cursor:pointer}
+
+/* 나가기 · 신청 취소 · 계정 삭제 — 파괴적 동작은 글자로만 (2026-09-30 74차) */
+.sheetlink{display:block;margin:var(--sp-5) auto 0;padding:var(--sp-2);border:0;background:none;
+  font:500 13.5px/1.4 var(--font);color:var(--danger-700);cursor:pointer}
+.acctdel{display:block;margin:var(--sp-6) auto var(--sp-6);color:var(--text-dim)}

@@ -1,0 +1,30 @@
+/* ============================================================
+   mobile.css — 스마트폰 시연판(mobile/) 전용 · app.css 다음에 로드
+   원본 app.html은 이 파일을 쓰지 않는다. _mobile.cjs가 시연판에만 넣는다.
+   hex 리터럴 0개 — 색은 tokens.css만.
+   ============================================================ */
+
+/* 두 번 눌러 확대 · 늘어나는 바깥 스크롤을 막아 앱처럼 */
+html{touch-action:manipulation;overscroll-behavior:none}
+
+@media (max-width:767px){
+  /* 노치 · 상태 바 아래로 내용이 들어가지 않게 (아래쪽은 app.css가 이미 탭바 · 하단 버튼에 준다) */
+  .device{padding-top:env(safe-area-inset-top,0px);
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  .device.is-dark{background:var(--gray-900)}   /* QR 체크인(S-12)처럼 어두운 화면이면 상태 바 아래 띠도 어둡게 */
+}
+
+/* ── 시연 도구 — 마이 탭을 길게 누르면 열린다 · 발표자만 아는 자리 ── */
+.demo{position:absolute;inset:0;z-index:40;display:none}
+.demo.is-open{display:block}
+.demo__scrim{position:absolute;inset:0;background:rgba(25,31,40,.4)}
+.demo__panel{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;
+  background:var(--surface);border-radius:var(--r-sheet) var(--r-sheet) 0 0;box-shadow:var(--shadow-sheet);
+  padding:var(--sp-4) var(--page-x) calc(var(--sp-8) + env(safe-area-inset-bottom,0px))}
+.demo__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2)}
+.demo__title{font:var(--t-title) var(--font)}
+.demo__g{padding:var(--sp-3) 0;border-bottom:1px solid var(--line)}
+.demo__g:last-child{border-bottom:0}
+.demo__k{display:block;font:600 12.5px/1.4 var(--font);color:var(--text-sub);margin-bottom:var(--sp-2)}
+.demo__row{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.demo__danger{font:600 14.5px/1.4 var(--font);color:var(--danger-700);min-height:44px;padding:0}
