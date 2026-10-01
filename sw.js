@@ -1,6 +1,6 @@
 /* 회의실 예약 시연판 — 오프라인 캐시 (_mobile.cjs가 만든다 · 직접 고치지 않는다) */
-const VERSION = 'spacekey-a08c9c50';
-const PRECACHE = ["./","index.html","manifest.webmanifest","logo/dy.gif","assets/tokens.css?v=3f78436d","assets/components.css?v=b695712f","assets/app.css?v=7e597efd","assets/mobile.css?v=1b2e2fbe","assets/mock.js?v=ec453ef3","assets/accounts.js?v=1af3b984","assets/app.js?v=2b338bd6","assets/demo.js?v=070119a6","assets/icons/icon-192.png","assets/icons/icon-512.png","assets/icons/icon-maskable-512.png","assets/icons/apple-touch-icon.png","assets/icons/favicon-32.png"];
+const VERSION = 'siot-mr-bbaee289';
+const PRECACHE = ["./","index.html","manifest.webmanifest","logo/dy.gif","assets/brand/siot-logo.png","assets/tokens.css?v=3f78436d","assets/components.css?v=b695712f","assets/app.css?v=616a19ef","assets/mobile.css?v=1b2e2fbe","assets/storage-migrate.js?v=3f4030e6","assets/mock.js?v=43d94d21","assets/accounts.js?v=398faadf","assets/app.js?v=206d07f0","assets/demo.js?v=95a76319","assets/icons/icon-192.png","assets/icons/icon-512.png","assets/icons/icon-maskable-512.png","assets/icons/apple-touch-icon.png","assets/icons/favicon-32.png"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
 });

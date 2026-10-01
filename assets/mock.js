@@ -38,7 +38,7 @@
   /* 예약 단위 — SLOT_MIN은 관리자 web 설정 › 회의실 기본값 「예약 단위」(1시간 · 30분),
      회의실마다 policy.slotMin(없음 = 기본 설정 따르기 · 60 · 30)으로 바꿀 수 있다 (2026-09-28 57차 — 53차 1시간 고정 원복) */
   var SLOT_MIN = (function () {   /* 같은 origin이면 web이 저장한 값을 쓴다 (2026-09-29 66차 · 회원 · 회사코드와 같은 방식) */
-    try { var d = JSON.parse(localStorage.getItem('spacekey.defaults.v1') || 'null'); if (d && d.unit === '30분') return 30; } catch (e) {}
+    try { var d = JSON.parse(localStorage.getItem('siot.mr.defaults.v1') || 'null'); if (d && d.unit === '30분') return 30; } catch (e) {}
     return 60;
   })();
   var coSlot = SLOT_MIN;                   // 지금 고른 회사의 기본 예약 단위 — web 설정은 web 회사에만 (74차)
@@ -722,12 +722,12 @@
   /* ── 08f 알림 설정 (2026-09-30 70차) ────────────────────
      무엇을 · 언제 보낼지(정책)는 관리자 web 설정 › 알림 — 켠 종류 · 리마인드 시점 · 야간 보류 · 문안.
      이 폰에서 울릴지는 사람마다 앱 마이 › 알림 설정 — 전체 켜기/끄기 + 종류별. 관리자가 끈 종류는 목록에 없다.
-     규약: 정책 spacekey.notify.v1(web이 쓴다) · 이 폰 설정 spacekey.push.v1(기기마다 · 프로토타입은 localStorage)
+     규약: 정책 siot.mr.notify.v1(web이 쓴다) · 이 폰 설정 siot.mr.push.v1(기기마다 · 프로토타입은 localStorage)
      74차 — 정책은 회사마다다. 이 폰 설정도 회사마다: { v:2, all, off: { 회사코드: { 종류: true }, _account: { member: true } } }
-       · 회사 알림 = 그 회사가 켠 종류(web 회사만 spacekey.notify.v1, 앱에만 있는 데모 회사는 처음 값)
+       · 회사 알림 = 그 회사가 켠 종류(web 회사만 siot.mr.notify.v1, 앱에만 있는 데모 회사는 처음 값)
        · 계정 알림 = 「가입 결과」(승인 · 반려 · 퇴사) — 회사가 끌 수 없는 필수 알림. 이 폰에서 울릴지만 고른다
        · v1(회사 구분 없는 옛 설정)은 읽지 않는다 */
-  var NKEY = 'spacekey.notify.v1', PUSH_KEY = 'spacekey.push.v1';
+  var NKEY = 'siot.mr.notify.v1', PUSH_KEY = 'siot.mr.push.v1';
   var NOTIFY_KINDS = [['confirm', '예약 확정', true], ['remind', '리마인드', true], ['fail', '제어 실패', false], ['cancel', '예약 취소 (관리자)', true]];   /* web 처음 값과 같다 */
   function readJSON(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
   /** cos = [{ code, name, web }] — 내 정상 소속 회사들 */

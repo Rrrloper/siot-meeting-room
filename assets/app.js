@@ -44,9 +44,9 @@
   var STILL = /[?&]still=1/.test(location.search);
   /* ?home=live|soon|none 으로 홈 상태를 지정해 열 수 있다 (미리보기용) */
   var PRESET_HOME = (location.search.match(/[?&]home=(live|soon|none)/) || [])[1] || null;
-  /* 스마트폰 시연판(mobile/ · _mobile.cjs)은 window.SPACEKEY_DEMO = true — 처음 여는 폰은 데모 계정으로
+  /* 스마트폰 시연판(mobile/ · _mobile.cjs)은 window.SIOT_DEMO = true — 처음 여는 폰은 데모 계정으로
      저절로 들어가지 않고 로그인부터, 스플래시 뒤에는 로그인돼 있으면 홈으로 (2026-10-01 · 79차) */
-  var DEMO = !!window.SPACEKEY_DEMO;
+  var DEMO = !!window.SIOT_DEMO;
 
 
   /* ============================================================
@@ -2318,7 +2318,7 @@
 
     $('#loginBody').innerHTML =
       '<div class="login">' +
-        '<div class="login__logo">SPACEKEY</div>' +
+        '<div class="login__logo" role="img" aria-label="SIOT"></div>' +   /* SIOT 로고 이미지 — 글자 워드마크 대신 (2026-10-01) */
         '<h1 class="login__title">' + lede + '</h1>' +
         '<div class="social">' + SOCIAL.map(function (s) {
           return '<button class="btn social__b social__b--' + s[0] + '" data-social="' + s[0] + '">' +
@@ -3254,7 +3254,7 @@
 
     /* 관리자가 web에서 알림 정책을 바꾸면 알림 설정 목록이 그 자리에서 바뀐다 (70차) */
     window.addEventListener('storage', function (e) {
-      if (e.key !== 'spacekey.notify.v1') return;
+      if (e.key !== 'siot.mr.notify.v1') return;
       M.notifySettings = F.readNotify(activeCos());
       if (stack[stack.length - 1] === 'S-20') renderNotifySet();
     });

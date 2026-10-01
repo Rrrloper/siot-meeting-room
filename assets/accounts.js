@@ -7,24 +7,24 @@
        이메일 없음 · 문자 인증은 이번에 없음(추후) · 간편 로그인 계정은 비밀번호가 없다
      · 회사마다 소속 하나. 회사코드를 넣고 사번 · 부서 · 직급을 고르면 그 회사 관리자 web(회원)이 승인한다
      · 앱 사용자에게 권한 구분은 없다(67차). 관리자 web은 SIOT 계정으로 로그인한다
-   예전 규약 spacekey.accounts.v1(이메일 · 임시 비밀번호)은 쓰지 않는다.
+   예전 규약 siot.mr.accounts.v1(이메일 · 임시 비밀번호)은 쓰지 않는다.
 
    앱(회의실예약 APP/app.html)과 관리자 웹(회의실예약 web/…)이 같은 origin(localhost:8105)에서 열리므로
    localStorage를 함께 쓴다. ⚠ 프로토타입 저장소다 — 실제 제품에서는 서버가 갖고, 비밀번호는 해시로만 보관한다.
 
    저장 규약 — 이 주석이 정본이다. 관리자 웹(A-05 회원 · A-08 설정 · A-02 회의실 상세)도 같은 모양을 읽고 쓴다.
-     spacekey.users.v1    { v:1, list:[ User ] }       앱이 쓴다
+     siot.mr.users.v1    { v:1, list:[ User ] }       앱이 쓴다
        User    id "U-…" · name · phone "010-1234-5678" · password(간편 로그인은 null)
                provider 'phone' | 'kakao' | 'naver' | 'apple' | 'google' · createdAt ISO
-     spacekey.members.v1  { v:1, list:[ Member ] }     앱이 신청하고 web 회원이 승인 · 반려 · 퇴사 처리한다
+     siot.mr.members.v1  { v:1, list:[ Member ] }     앱이 신청하고 web 회원이 승인 · 반려 · 퇴사 처리한다
        Member  id "M-…" · userId · companyCode · empNo 사번 · deptId · rankId
                status 'PENDING' 승인 대기 | 'ACTIVE' 정상 | 'REJECTED' 반려 | 'RETIRED' 퇴사
                appliedAt ISO · decidedAt ISO|null · rejectReason(반려는 사유 필수)
-     spacekey.org.v1      { v:1, depts:[{ id, name, parent, order }], ranks:[{ id, name, order }] }   web 설정(A-08)이 쓴다
+     siot.mr.org.v1      { v:1, depts:[{ id, name, parent, order }], ranks:[{ id, name, order }] }   web 설정(A-08)이 쓴다
                부서는 무한 단계 트리(parent = 상위 id | null) · 직급은 서열(order 0 = 가장 낮음)
-     spacekey.company.v1  { v:1, code }                web 설정(A-08)이 쓴다 — 그 web 회사의 회사코드
-     spacekey.session.v1  { v:1, userId|null, co }     앱 전용(이 폰) — 로그인한 계정 · 고른 회사코드
-     spacekey.inbox.v1    { v:1, read:{ id:true } }    앱 전용(이 폰) — 가입 결과 알림을 읽었는지 (74차)
+     siot.mr.company.v1  { v:1, code }                web 설정(A-08)이 쓴다 — 그 web 회사의 회사코드
+     siot.mr.session.v1  { v:1, userId|null, co }     앱 전용(이 폰) — 로그인한 계정 · 고른 회사코드
+     siot.mr.inbox.v1    { v:1, read:{ id:true } }    앱 전용(이 폰) — 가입 결과 알림을 읽었는지 (74차)
    74차 더한 것
      Member  retiredBy 'admin'(관리자 퇴사 처리) | 'self'(본인이 나감 · 계정 삭제) · retireReason 「본인 요청」|「계정 삭제」
              canceledRsv 끝날 때 취소된 남은 예약 수(프로토타입은 앱이 채운다 · 제품은 서버)
@@ -32,7 +32,7 @@
      설정은 회사마다 — 알림 정책 · 회의실 기본값은 그 회사 관리자 web의 값이다. 프로토타입의 web 설정은 web 회사(대양씨아이에스)에만 쓴다
 
    프로토타입 약속
-     · 관리자 web은 회사 하나(대양씨아이에스 = spacekey.company.v1의 코드)다. 두 번째 회사 (주)한빛산업(HANBIT-01)은
+     · 관리자 web은 회사 하나(대양씨아이에스 = siot.mr.company.v1의 코드)다. 두 번째 회사 (주)한빛산업(HANBIT-01)은
        앱에만 있는 데모 회사라 조직 · 데이터를 여기와 mock.js에 둔다.
      · 연출용 회사 (주)새움테크(회사코드 1111)도 앱에만 있다 — 가입 신청하면 앱이 몇 초 뒤 저절로 승인한다(73차).
      · 데모 계정 김도현(U-001 · 010-1234-5678 · abcd1234)은 두 회사에 이미 소속돼 있다. 저장소에는 쓰지 않는다 —
@@ -44,8 +44,8 @@
 (function (global) {
   'use strict';
 
-  var UKEY = 'spacekey.users.v1', MKEY = 'spacekey.members.v1', OKEY = 'spacekey.org.v1',
-      CKEY = 'spacekey.company.v1', SKEY = 'spacekey.session.v1', IKEY = 'spacekey.inbox.v1';
+  var UKEY = 'siot.mr.users.v1', MKEY = 'siot.mr.members.v1', OKEY = 'siot.mr.org.v1',
+      CKEY = 'siot.mr.company.v1', SKEY = 'siot.mr.session.v1', IKEY = 'siot.mr.inbox.v1';
 
   function readJSON(k) {
     try { return JSON.parse(global.localStorage.getItem(k) || 'null'); }

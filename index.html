@@ -14,11 +14,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
-<script>window.SPACEKEY_DEMO = true;</script>
+<script>window.SIOT_DEMO = true;</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="assets/tokens.css?v=3f78436d">
 <link rel="stylesheet" href="assets/components.css?v=b695712f">
-<link rel="stylesheet" href="assets/app.css?v=7e597efd">
+<link rel="stylesheet" href="assets/app.css?v=616a19ef">
 <link rel="stylesheet" href="assets/mobile.css?v=1b2e2fbe">
 </head>
 <body>
@@ -194,7 +194,7 @@
     <!-- ══ S-01 스플래시 ══ -->
     <section class="screen" data-screen="S-01" aria-label="시작">
       <div class="splash">
-        <span class="splash__mark">SPACEKEY</span>
+        <span class="splash__mark" role="img" aria-label="SIOT"></span>   <!-- SIOT 로고 이미지(CSS 배경 · assets/brand) — 글자 워드마크 대신 (2026-10-01) -->
         <!-- 앱은 플랫폼이다 — 회사 상호가 아니라 서비스 이름만 (2026-09-30 72차 · 회사는 홈 헤더에서 고른다) -->
         <span class="splash__by">회의실 예약</span>
       </div>
@@ -362,9 +362,10 @@
   <p class="tools__note">모두 꺼도 화면은 그대로 쓸 수 있습니다</p>
 </aside>
 
-<script src="assets/mock.js?v=ec453ef3"></script>
-<script src="assets/accounts.js?v=1af3b984"></script>
-<script src="assets/app.js?v=2b338bd6"></script>
-<script src="assets/demo.js?v=070119a6"></script>
+<script src="assets/storage-migrate.js?v=3f4030e6"></script>
+<script src="assets/mock.js?v=43d94d21"></script>
+<script src="assets/accounts.js?v=398faadf"></script>
+<script src="assets/app.js?v=206d07f0"></script>
+<script src="assets/demo.js?v=95a76319"></script>
 </body>
 </html>

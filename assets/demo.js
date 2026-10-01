@@ -77,7 +77,7 @@
     var cb = t.closest('[data-demo-click]');
     if (cb) { var b = document.querySelector(cb.getAttribute('data-demo-click')); close(); if (b) b.click(); return; }
     if (t.closest('[data-demo-wipe]')) {
-      try { Object.keys(localStorage).filter(function (k) { return k.indexOf('spacekey.') === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } catch (err) {}
+      try { Object.keys(localStorage).filter(function (k) { return k.indexOf('siot.mr.') === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } catch (err) {}
       history.replaceState(null, '', location.pathname + '#S-01');   /* 다시 열면 스플래시 → 로그인 */
       location.reload();
     }

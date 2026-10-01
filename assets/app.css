@@ -453,11 +453,15 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .splash{flex:1;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:var(--sp-2);animation:fade var(--dur) var(--ease)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.splash__mark{font:800 30px/1 var(--font);letter-spacing:-.03em;color:var(--brand-600)}
+/* 워드마크 = SIOT 로고 이미지(가로 865 : 세로 220) — 글자 워드마크 대신 (2026-10-01).
+   CSS 배경이라 화면별 파일(화면/) · 시연판(mobile/)에서도 경로가 그대로 풀린다 */
+.splash__mark{display:block;height:40px;aspect-ratio:865/220;
+  background:url("brand/siot-logo.png") center/contain no-repeat}
 .splash__by{font:var(--t-sub) var(--font);color:var(--text-sub)}
 
 .login{padding:var(--sp-10) var(--page-x) 0;display:flex;flex-direction:column}
-.login__logo{font:800 24px/1 var(--font);letter-spacing:-.03em;color:var(--brand-600)}
+.login__logo{height:28px;aspect-ratio:865/220;align-self:flex-start;
+  background:url("brand/siot-logo.png") left center/contain no-repeat}
 .login__title{font:var(--t-display) var(--font);margin-top:var(--sp-2)}
 .login__field{position:relative;margin-top:var(--sp-3)}
 .login__eye{position:absolute;right:4px;top:50%;transform:translateY(-50%)}
