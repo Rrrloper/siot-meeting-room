@@ -19,7 +19,10 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{font:var(--t-body) var(--font);color:var(--text);background:var(--bg)}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+/* align-items — Safari(WebKit)는 기본 스타일에서 button에 align-items:flex-start를 준다. 그대로 두면 세로 flex 카드
+   (홈 오늘 예약 · 즐겨찾기 · 최근 사용)의 안쪽이 글자 폭으로 줄어 버튼이 작아지고 진행 바 · 사진 칸이 사라진다.
+   크롬과 같은 늘이기로 맞춘다 — 가운데 정렬이 필요한 버튼은 각자 클래스에서 다시 정한다 (2026-10-01 · 79차 아이폰 시연판) */
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit;align-items:stretch}
 input,select,textarea{font:inherit;color:inherit}
 ul,ol{list-style:none}
 img{max-width:100%;display:block}
