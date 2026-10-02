@@ -1,0 +1,369 @@
+/* ============================================================
+   components.css — 공통 컴포넌트
+   tokens.css 다음, app.css 이전에 로드한다.
+   색은 전부 var(--...) — hex 리터럴 0개.
+   scale · 호버 이동 · 호버 그림자 변화 없음.
+
+   구성
+     01 리셋 · 타이포        07 예약 카드
+     02 아이콘               08 SIOT 디바이스 카드
+     03 버튼                 09 바텀시트
+     04 칩 · 세그먼트        10 토스트
+     05 상태 텍스트          11 빈 화면
+     06 스위치 · 스테퍼
+   ============================================================ */
+
+
+/* ── 01 리셋 · 타이포 ─────────────────────────────────────── */
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{font:var(--t-body) var(--font);color:var(--text);background:var(--bg)}
+/* align-items — Safari(WebKit)는 기본 스타일에서 button에 align-items:flex-start를 준다. 그대로 두면 세로 flex 카드
+   (홈 오늘 예약 · 즐겨찾기 · 최근 사용)의 안쪽이 글자 폭으로 줄어 버튼이 작아지고 진행 바 · 사진 칸이 사라진다.
+   크롬과 같은 늘이기로 맞춘다 — 가운데 정렬이 필요한 버튼은 각자 클래스에서 다시 정한다 (2026-10-01 · 79차 아이폰 시연판) */
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit;align-items:stretch}
+input,select,textarea{font:inherit;color:inherit}
+ul,ol{list-style:none}
+img{max-width:100%;display:block}
+[hidden]{display:none !important}
+.tnum{font-variant-numeric:tabular-nums}
+
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--sp-1)}
+
+/* 터치 타깃 44×44 — 시각 크기와 별개로 눌리는 영역을 넓힌다 */
+.hit44{position:relative}
+.hit44::before{content:"";position:absolute;top:50%;left:50%;
+  width:44px;height:44px;transform:translate(-50%,-50%)}
+
+
+/* ── 02 아이콘 — 선 24px · stroke 1.6 · currentColor ───────── */
+
+.icon{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block}
+.icon--sm{width:18px;height:18px}
+.icon--lg{width:48px;height:48px;stroke-width:1.3}
+/* 아이콘에 원형 배경을 두지 않는다 */
+
+/* 즐겨찾기 별 — 카드 우측 상단에 얹는다.
+   보이는 것은 20px 아이콘이지만 누르는 자리는 44×44다 (§18 터치 타깃).
+   비어 있으면 회색 외곽선 ☆, 담아 두면 브랜드색으로 채운 ★.
+   흰 바탕에 얹히므로 채움색은 --brand-600 (#FF9500은 흰 위 대비 2.20으로 부족하다) */
+.favbtn{position:absolute;top:0;right:0;width:44px;height:44px;
+  display:flex;align-items:flex-start;justify-content:flex-end;
+  padding:10px 10px 0 0;box-sizing:border-box;
+  color:var(--gray-400);cursor:pointer;
+  transition:color var(--dur-fast) var(--ease)}
+.favbtn .icon{width:20px;height:20px;
+  filter:drop-shadow(0 0 1px rgba(255,255,255,.9))}
+.favbtn:active{color:var(--gray-500)}
+.favbtn.is-on{color:var(--brand-600)}
+.favbtn.is-on .icon{fill:currentColor}
+.favbtn.is-on:active{color:var(--brand-700)}
+
+.iconbtn{display:flex;align-items:center;justify-content:center;
+  width:44px;height:44px;flex:none;border-radius:var(--r-thumb);color:var(--text);
+  transition:background-color var(--dur-fast) var(--ease)}
+.iconbtn:active{background:var(--pressed)}
+
+
+/* ── 03 버튼 ──────────────────────────────────────────────── */
+
+.btn{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  width:100%;min-height:52px;padding:0 var(--sp-4);
+  border-radius:var(--r-cta);font:600 15.5px/1 var(--font);
+  transition:background-color var(--dur-fast) var(--ease)}
+
+.btn--primary{background:var(--brand-500);color:var(--on-brand)}
+.btn--primary:active,.btn--primary.is-pressed{background:var(--brand-600)}
+
+.btn--secondary{background:var(--surface);color:var(--text);
+  border:1px solid var(--line-strong)}
+.btn--secondary:active,.btn--secondary.is-pressed{background:var(--pressed)}
+
+/* 파괴적 동작은 텍스트로만. 면으로 칠하지 않는다 */
+.btn--danger{background:var(--surface);color:var(--danger-700);
+  border:1px solid var(--danger-500);border-color:color-mix(in srgb,var(--danger-500) 34%,var(--gray-0))}
+.btn--danger:active{background:var(--pressed)}
+
+.btn--sm{min-height:44px;font-size:14.5px;border-radius:var(--r-cta)}   /* 버튼 모서리는 하단 실행 버튼과 같게 (65차 · 홈 오늘 카드 버튼은 시안 3a 값 유지) */
+.btn.is-disabled,.btn:disabled{opacity:.4;pointer-events:none}
+
+.btnrow{display:flex;gap:var(--sp-2)}
+.btnrow>.btn{flex:1}
+
+/* 하단 고정 실행 버튼 — 2분할 금지. 닫기는 X로 */
+.fixedcta{flex:none;padding:var(--sp-3) var(--page-x) var(--sp-3);
+  background:var(--surface);position:relative}
+.fixedcta::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:16px;
+  background:linear-gradient(to top,var(--surface),transparent);pointer-events:none}
+.fixedcta:empty{display:none}
+
+
+/* ── 04 칩 · 세그먼트 ─────────────────────────────────────── */
+
+.chiprow{display:flex;gap:var(--sp-2);overflow-x:auto;scrollbar-width:none}
+.chiprow::-webkit-scrollbar{display:none}
+
+.chip{flex:none;display:flex;align-items:center;gap:var(--sp-1);
+  min-height:38px;padding:0 var(--sp-3);border-radius:var(--r-full);
+  background:var(--gray-100);color:var(--gray-700);
+  font:500 13px/1 var(--font);white-space:nowrap;
+  transition:background-color var(--dur-fast) var(--ease)}
+.chip:active{background:var(--gray-200)}
+.chip.is-selected{background:var(--gray-900);color:var(--gray-0);font-weight:600}
+.chip.is-disabled{opacity:.4;pointer-events:none}
+
+/* 예약 사유처럼 브랜드 선택임을 알려야 할 때 */
+.chip--brand.is-selected{background:var(--brand-100);color:var(--brand-600)}
+
+
+/* ── 05 상태 텍스트 — 배지 대체. 배경·테두리·라운드 없음 ───── */
+
+.status{font:var(--t-status) var(--font)}
+.status--brand{color:var(--brand-600)}
+.status--ok{color:var(--ok-700)}
+.status--warn{color:var(--warn-700)}
+.status--danger{color:var(--danger-700)}
+.status--muted{color:var(--text-sub)}
+.status--dim{color:var(--text-dim)}
+
+
+/* ── 06 스위치 · 스테퍼 ───────────────────────────────────── */
+
+.switch{position:relative;width:42px;height:25px;flex:none;
+  border-radius:var(--r-full);background:var(--gray-300);
+  transition:background-color var(--dur) var(--ease)}
+.switch::before{content:"";position:absolute;inset:-6px}   /* 터치 영역 확대 */
+.switch::after{content:"";position:absolute;top:3px;left:3px;
+  width:19px;height:19px;border-radius:50%;background:var(--gray-0);
+  transition:left var(--dur) var(--ease)}
+.switch.is-on{background:var(--dev)}
+.switch.is-on::after{left:20px}
+.switch.is-disabled{opacity:.4;pointer-events:none}
+
+.stepper{display:flex;align-items:center;gap:var(--sp-3)}
+.stepper__btn{display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;flex:none;border-radius:var(--r-inner);
+  background:var(--gray-100);color:var(--gray-700);
+  transition:background-color var(--dur-fast) var(--ease)}
+.stepper__btn:active{background:var(--gray-200)}
+.stepper__btn.is-disabled{opacity:.35;pointer-events:none}
+.stepper__value{font:700 16px/1 var(--font);min-width:56px;text-align:center;
+  font-variant-numeric:tabular-nums}
+
+/* 슬라이더 — SIOT 기기 카드와 공용 */
+.slider{-webkit-appearance:none;appearance:none;width:100%;height:8px;
+  border-radius:var(--r-full);background:var(--gray-200);outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:22px;height:22px;border-radius:50%;background:var(--gray-0);
+  border:.5px solid var(--dev-line);box-shadow:var(--dev-shadow);cursor:pointer}
+.slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;
+  background:var(--gray-0);border:.5px solid var(--dev-line);box-shadow:var(--dev-shadow)}
+
+
+/* ── 07 예약 카드 — 첫 줄이 상태 텍스트 ───────────────────── */
+
+.rsvcard{display:flex;flex-direction:column;gap:var(--sp-2);
+  width:100%;padding:var(--sp-4);text-align:left;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  position:relative;overflow:hidden;
+  transition:background-color var(--dur-fast) var(--ease)}
+.rsvcard:active{background:var(--gray-25)}
+.rsvcard--live{border-color:var(--brand-300);background:var(--brand-50)}
+.rsvcard--new{border-color:color-mix(in srgb,var(--ok-500) 45%,var(--gray-0));
+  background:color-mix(in srgb,var(--ok-500) 6%,var(--gray-0))}
+.rsvcard--past{opacity:.6}
+
+.rsvcard__top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-2)}
+.rsvcard__when{font:var(--t-cap) var(--mono);color:var(--text-sub);flex:none}
+.rsvcard__name{font:700 19px/1.35 var(--font);margin-top:var(--sp-1)}
+.rsvcard__meta{font:var(--t-sub) var(--font);color:var(--text-sub)}
+.rsvcard__go{display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid var(--line);padding-top:var(--sp-3);margin-top:var(--sp-1);
+  font:600 14px/1 var(--font);color:var(--brand-600)}
+.rsvcard__go .icon{width:18px;height:18px;color:var(--text-dim)}
+
+/* 경과 라인 — 진행 중 카드의 구분 수단. 좌측 세로선은 쓰지 않는다 */
+.elapsed{height:5px;border-radius:var(--r-full);background:var(--gray-200);
+  position:relative;overflow:hidden;margin-top:var(--sp-1)}
+.elapsed>i{position:absolute;left:0;top:0;bottom:0;display:block;
+  background:var(--brand-500);border-radius:var(--r-full)}
+.elapsed__l{display:flex;justify-content:space-between;
+  font:var(--t-cap) var(--mono);color:var(--text-sub);margin-top:var(--sp-2)}
+
+
+/* ── 08 SIOT 디바이스 카드 ────────────────────────────────
+   SIOT 모바일 앱의 규격을 그대로 옮겼다.
+   0.5px 테두리 · 라운드 12px · 그림자 0 1px 2px · 최소 높이 168px.
+   69차(2026-09-29) — 모든 카드 2열. 냉난방처럼 조작이 많은 기기는 카드에 상태만, 조작은 「리모컨 제어」 창 */
+
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)}
+
+.dcard{background:var(--surface);border:.5px solid var(--dev-line);
+  border-radius:var(--r-dev);box-shadow:var(--dev-shadow);
+  padding:var(--sp-3);display:flex;flex-direction:column;gap:11px;
+  min-height:var(--dev-min-h)}
+.dcard--wide{grid-column:1/3;min-height:0}   /* 69차부터 쓰지 않음 — 모든 카드 2열 */
+.dcard__sub{font:500 12.5px/1.4 var(--font);color:var(--text-sub);text-align:center;margin-top:-4px}
+/* SIOT 리모컨 카드의 「리모컨 제어」 알약 — 채운 브랜드 버튼 */
+.dpill{align-self:center;height:40px;padding:0 20px;border:0;border-radius:var(--r-full);background:var(--dev);color:var(--on-brand);font:700 14px/1 var(--font);cursor:pointer}
+.dpill:active{background:var(--brand-600)}
+/* 리모컨 창 본문 */
+.remote{display:flex;flex-direction:column;gap:var(--sp-4);padding-bottom:var(--sp-2)}
+.dcard--off{background:var(--gray-25)}
+.dcard.is-locked{opacity:.42;pointer-events:none}
+
+.dcard__h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2)}
+.dcard__nm{font:600 14px/1.3 var(--font)}
+.dcard__dot{width:9px;height:9px;flex:none;border-radius:50%;background:var(--dev)}
+.dcard__dot.is-off{background:var(--dev-line)}
+.dcard__ro{font:600 10px/1.5 var(--font);color:var(--text-sub);
+  background:var(--gray-100);padding:2px 7px;border-radius:var(--r-mini);white-space:nowrap}
+
+/* 스위치 스택 — 다구 스위치 */
+.swstack{display:flex;border-radius:var(--r-inner);overflow:hidden;border:.5px solid var(--dev-line)}
+.swstack--v{flex-direction:column}
+.swstack__b{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:13px 6px;font:600 13px/1 var(--font);color:var(--text-sub);
+  background:var(--surface);border-right:.5px solid var(--dev-line);
+  transition:background-color var(--dur-fast) var(--ease)}
+.swstack--v .swstack__b{border-right:0;border-bottom:.5px solid var(--dev-line)}
+.swstack__b:last-child{border-right:0;border-bottom:0}
+.swstack__b .icon{width:18px;height:18px}
+.swstack__b.is-on{background:var(--dev-tint);color:var(--dev)}
+
+/* 큰 값 + 바 */
+.dcard__big{font:600 26px/1 var(--font);color:var(--gray-700);text-align:center;
+  font-variant-numeric:tabular-nums}
+.dbar{height:8px;border-radius:var(--r-full);background:var(--gray-100);position:relative}
+.dbar>i{position:absolute;left:0;top:0;height:100%;display:block;
+  border-radius:var(--r-full);background:var(--dev)}
+.dbar>span{position:absolute;top:-7px;width:22px;height:22px;display:block;
+  border-radius:50%;background:var(--gray-0);border:.5px solid var(--dev-line);
+  box-shadow:var(--dev-shadow);transform:translateX(-50%)}
+
+/* 슬라이더 줄 — 라벨과 값 */
+.drow{display:flex;flex-direction:column;gap:var(--sp-2)}
+.drow__l{display:flex;justify-content:space-between;align-items:baseline;
+  font:500 12.5px/1 var(--font);color:var(--gray-700)}
+.drow__l b{font:700 13px/1 var(--mono);color:var(--dev)}
+
+/* 3버튼 — 블라인드 내림·정지·올림 */
+.tri{display:flex;gap:var(--sp-2)}
+.tri__b{flex:1;display:flex;align-items:center;justify-content:center;
+  min-height:44px;border:.5px solid var(--dev-line);border-radius:var(--r-inner);
+  background:var(--surface);color:var(--gray-700);
+  transition:background-color var(--dur-fast) var(--ease)}
+.tri__b:active{background:var(--dev-tint)}
+
+/* 플러그 원형 */
+.plug{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp-2);flex:1}
+.plug__c{width:84px;height:84px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;background:var(--gray-300);
+  transition:background-color var(--dur) var(--ease)}
+.plug__c .icon{width:28px;height:28px;color:var(--gray-0)}
+.plug__c.is-on{background:var(--dev);box-shadow:0 0 14px var(--dev-glow)}
+.plug__s{font:600 14px/1 var(--font);color:var(--text-sub)}
+.plug__s.is-on{color:var(--dev)}
+
+/* 리모컨 버튼 격자 */
+.rmt{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2)}
+.rmt__b{display:flex;align-items:center;justify-content:center;gap:5px;
+  min-height:44px;border:.5px solid var(--dev-line);border-radius:var(--r-inner);
+  background:var(--surface);color:var(--gray-700);font:600 13px/1 var(--font);
+  transition:background-color var(--dur-fast) var(--ease)}
+.rmt__b:active{background:var(--dev-tint)}
+.rmt__b .icon{width:16px;height:16px}
+.rmt__b.is-power{background:var(--dev-tint);color:var(--dev);border-color:var(--dev)}
+.rmt__b--full{grid-column:1/3}
+
+/* 읽기 전용 센서 */
+.sensor{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp-2);flex:1}
+.sensor__icn{width:58px;height:58px;border-radius:var(--r-thumb);
+  display:flex;align-items:center;justify-content:center;background:var(--dev-tint)}
+.sensor__icn .icon{width:28px;height:28px;color:var(--dev)}
+.sensor__v{font:var(--t-num) var(--font);font-variant-numeric:tabular-nums}
+.sensor__m{display:flex;gap:var(--sp-3);font:600 12px/1 var(--font);color:var(--gray-700)}
+.sensor__m i{font-style:normal;font-weight:500;color:var(--text-sub);margin-right:3px}
+
+/* 2버튼 — 도어락 */
+.duo{display:flex;gap:var(--sp-2);flex:1;align-items:center}
+.duo__b{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+  min-height:56px;justify-content:center;
+  border:.5px solid var(--dev-line);border-radius:var(--r-inner);
+  background:var(--surface);color:var(--gray-700);font:600 13px/1.3 var(--font);
+  transition:background-color var(--dur-fast) var(--ease)}
+.duo__b:active{background:var(--dev-tint)}
+.duo__b .icon{width:22px;height:22px}
+.duo__b.is-act{background:var(--dev);color:var(--gray-0);border-color:var(--dev)}
+
+/* 전송 중 · 실패 — 낙관적 UI 금지 (원칙 05) */
+.dsend{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+  font:500 12.5px/1.4 var(--font);color:var(--text-sub);text-align:center}
+.spinner{width:14px;height:14px;flex:none;border-radius:50%;
+  border:2px solid var(--gray-200);border-top-color:var(--dev);
+  animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dfail{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:7px;text-align:center}
+.dfail p{font:500 12.5px/1.45 var(--font);color:var(--text-sub)}
+.dfail button{font:600 13px/1 var(--font);color:var(--brand-600);min-height:32px}
+
+
+/* ── 09 바텀시트 — 우상단 X · 스크림 · 드래그 다운 ────────── */
+
+.sheetlayer{position:absolute;inset:0;display:none}
+.sheetlayer.is-open{display:block}
+.scrim{position:absolute;inset:0;background:rgba(25,31,40,.4);
+  opacity:0;transition:opacity var(--dur-sheet) var(--ease)}
+.sheetlayer.is-in .scrim{opacity:1}
+
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;
+  display:flex;flex-direction:column;
+  background:var(--surface);border-radius:var(--r-sheet) var(--r-sheet) 0 0;
+  box-shadow:var(--shadow-sheet);
+  transform:translateY(100%);transition:transform var(--dur-sheet) var(--ease)}
+.sheetlayer.is-in .sheet{transform:translateY(0)}
+.sheet--tall{height:88%}
+
+.sheet__handle{width:38px;height:4px;flex:none;margin:9px auto 6px;
+  border-radius:var(--r-full);background:var(--gray-200)}
+.sheet__head{display:flex;align-items:flex-start;gap:var(--sp-2);
+  padding:var(--sp-2) var(--page-x) var(--sp-3);flex:none}
+.sheet__title{flex:1;min-width:0;font:700 19px/1.35 var(--font)}
+.sheet__title span{display:block;font:var(--t-sub) var(--font);
+  color:var(--text-sub);margin-top:2px;font-weight:400}
+.sheet__body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:0 var(--page-x) var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-4)}
+
+
+/* ── 10 토스트 — 3초 · 되돌리기 액션 ──────────────────────── */
+
+.toast{position:absolute;left:var(--page-x);right:var(--page-x);bottom:var(--sp-6);
+  display:flex;align-items:center;gap:var(--sp-3);z-index:20;
+  padding:14px var(--sp-4);border-radius:var(--r-thumb);
+  background:var(--gray-900);color:var(--gray-0);
+  font:600 14px/1.4 var(--font);box-shadow:var(--shadow-float);
+  opacity:0;pointer-events:none;transition:opacity var(--dur) var(--ease)}
+.toast.is-on{opacity:1;pointer-events:auto}
+.toast__text{flex:1;min-width:0}
+.toast__action{flex:none;min-height:32px;padding:0 var(--sp-2);
+  font:600 13.5px/1 var(--font);color:var(--brand-300)}
+
+
+/* ── 11 빈 화면 — 선 아이콘 + 한 줄 + 액션 1개 ────────────── */
+
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp-4);padding:var(--sp-10) var(--page-x);text-align:center;color:var(--text-sub)}
+.empty__text{font:var(--t-body) var(--font);color:var(--text-sub);max-width:26ch}
+.empty__action{width:auto;min-width:160px}
+
+
+/* ── 접근성 ───────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}

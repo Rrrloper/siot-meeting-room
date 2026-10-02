@@ -1,0 +1,149 @@
+/* ============================================================
+   site.css — 현장 웹(G-01 번호 확인 · G-02 제어 | 안내 · G-03 이용 끝)
+   SIOT 신설 「회의실 예약 솔루션」의 세 번째 갈래. 앱 토큰 · 부품을 그대로 쓴다.
+   로드 순서: tokens.css → components.css → app.css → site.css
+   hex 리터럴 0개 — 색은 tokens.css만 (theme-color meta만 예외).
+   ============================================================ */
+
+/* 앱의 데스크톱 프로토타입 도구 자리(왼쪽 300px)를 쓰지 않는다 */
+@media (min-width:768px){
+  body{padding-left:0}
+}
+html{touch-action:manipulation}
+
+/* 노치 · 상태 바 아래로 내용이 들어가지 않게(폰) */
+@media (max-width:767px){
+  .device{padding-top:env(safe-area-inset-top,0px);
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+}
+
+/* 관리자 web 드로어 미리보기 — 폭과 상관없이 폰 틀 없이 iframe을 꽉 채운다 */
+html.is-preview body{display:block;min-height:0;padding:0;background:var(--bg)}
+html.is-preview .device{width:100%;height:100vh;border:0;border-radius:0}
+html.is-preview .statusbar,html.is-preview .homebar{display:none}
+
+.site{display:flex;flex-direction:column}
+
+
+/* ── 맨 위 한 줄 「앱이 있으면 앱으로 열기 ›」 ─────────────── */
+.applink{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);
+  min-height:44px;padding:0 calc(var(--page-x) - 4px) 0 var(--page-x);
+  border-bottom:1px solid var(--line);background:var(--surface);
+  font:500 13px/1.4 var(--font);color:var(--text-sub);text-decoration:none;
+  transition:background-color var(--dur-fast) var(--ease)}
+.applink:active{background:var(--pressed)}
+.applink .icon{width:18px;height:18px;color:var(--text-dim)}
+
+
+/* ── G-01 번호 확인 ─────────────────────────────────────────── */
+.g1{padding:var(--sp-8) var(--page-x) 0;display:flex;flex-direction:column}
+.g1 .login__logo{margin-bottom:var(--sp-6)}
+.g1__name{font:var(--t-display) var(--font);word-break:keep-all}
+.g1__group{margin-top:var(--sp-1);font:var(--t-sub) var(--font);color:var(--text-sub)}
+.g1__state{margin-top:var(--sp-3)}
+.g1__next{margin-top:var(--sp-1);font:var(--t-body) var(--font);color:var(--text-sub)}
+
+.g1__form{padding:var(--sp-8) var(--page-x) 0;display:flex;flex-direction:column;gap:var(--sp-3)}
+.g1__label{font:var(--t-body-b) var(--font)}
+.codebox--4 i{height:60px;font-size:26px}
+.codebox.is-locked{opacity:.4;pointer-events:none}
+.g1__msg{min-height:21px;font:var(--t-sub) var(--font);font-weight:600}
+.g1__msg.is-bad{color:var(--danger-700)}
+.g1__msg.is-wait{color:var(--warn-700)}
+
+/* 입력이 없는 상태 — QR 만료 · 지금 예약 없음 · 점검 중 · 찾을 수 없음 */
+.g1__stop{margin:var(--sp-8) var(--page-x) 0;padding:var(--sp-5);
+  border:1px solid var(--line);border-radius:var(--r-card);
+  display:flex;flex-direction:column;gap:var(--sp-1)}
+.g1__stop .icon{color:var(--text-sub);margin-bottom:var(--sp-2)}
+.g1__stop b{font:var(--t-sect) var(--font)}
+.g1__stop span{font:var(--t-body) var(--font);color:var(--text-sub)}
+
+
+/* ── G-02 탭 「제어 | 안내」 ─────────────────────────────────── */
+.stabs{flex:none;display:flex;background:var(--surface);border-bottom:1px solid var(--line);
+  padding:0 var(--page-x)}
+.stabs__b{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:46px;position:relative;font:600 15px/1 var(--font);color:var(--text-sub);text-align:center;
+  transition:color var(--dur-fast) var(--ease)}
+.stabs__b.is-on{color:var(--text)}
+.stabs__b.is-on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand-500)}
+.stabs__dot{width:6px;height:6px;border-radius:50%;background:var(--brand-500);display:block}
+html.is-preview .stabs__b{cursor:default}
+
+.hero--site{padding-top:var(--sp-4)}
+
+/* 문 열기 — QR · 리더기 방 · 3초 뒤 잠김. 카드 한 장 폭 전체 */
+.dcard--door{min-height:0;gap:var(--sp-3)}
+.dcard--door .duo{flex:none}
+.dcard--door .duo__b{flex-direction:row;gap:var(--sp-2);min-height:52px;font-size:14.5px}
+.dcard--door .dsend,.dcard--door .dfail{min-height:52px}
+.dcard--door .dfail{flex-direction:row}
+.dcard--door .duo__b.is-act{color:var(--on-brand)}   /* 주황 채움 위 글자는 잉크(§05) */
+.rmt__b.is-disabled{opacity:.4}
+
+/* 콘센트 · TV처럼 전원 하나 — 앱 플러그 원을 조금 작게 */
+.plug__c--sm{width:72px;height:72px}
+
+
+/* ── G-02 안내 ──────────────────────────────────────────────── */
+.info{padding:var(--sp-4) 0 var(--sp-6);display:flex;flex-direction:column;gap:var(--sp-6)}
+.info__name{padding:0 var(--page-x);font:700 20px/1.3 var(--font)}
+.isec{display:flex;flex-direction:column;gap:var(--sp-3);padding:0 var(--page-x)}
+.isec__t{font:var(--t-sect) var(--font)}
+.ncard{padding:var(--sp-4);border:1px solid var(--line);border-radius:var(--r-card);
+  display:flex;flex-direction:column;gap:var(--sp-1)}
+.ncard__t{font:var(--t-body-b) var(--font)}
+.ncard__b{font:var(--t-sub) var(--font);color:var(--gray-700);white-space:pre-line;word-break:break-all}
+.ncard__p{margin-top:var(--sp-1);font:var(--t-cap) var(--font);color:var(--text-dim);font-variant-numeric:tabular-nums}
+.clist{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.clist li{padding:var(--sp-3) 0;border-bottom:1px solid var(--line);font:var(--t-body) var(--font);word-break:break-all}
+.sheet .clist{border-top:0}
+.sheet .clist li:last-child{border-bottom:0}
+
+/* 광고 배너 — 가로 넘김 · 배열 순서 = 노출 순서 */
+.ads{display:flex;flex-direction:column;gap:10px}
+.ads__t{display:flex;gap:10px;overflow-x:auto;padding:0 var(--page-x);
+  scroll-snap-type:x mandatory;scrollbar-width:none}
+.ads__t::-webkit-scrollbar{display:none}
+.ad{flex:none;width:100%;aspect-ratio:2.4/1;scroll-snap-align:center;position:relative;overflow:hidden;
+  border-radius:var(--r-card);background:var(--gray-100);display:flex;align-items:flex-end;
+  padding:var(--sp-4) var(--sp-5);text-decoration:none;color:var(--text)}
+.ads__t.is-many .ad{width:calc(100% - 28px)}
+.ad img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ad__t{position:relative;font:700 18px/1.35 var(--font);word-break:keep-all}
+.ad.has-img .ad__t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+
+/* ── G-03 이용 끝 ───────────────────────────────────────────── */
+.g3{padding:var(--sp-8) var(--page-x) 0;display:flex;flex-direction:column}
+.g3 .login__logo{margin-bottom:var(--sp-6)}
+.g3__t{font:var(--t-display) var(--font);margin-top:var(--sp-1)}
+.g3 .waitlist{margin-top:var(--sp-6)}
+.g3__ads{margin:var(--sp-8) calc(-1 * var(--page-x)) 0}   /* 배너 줄은 화면 끝까지 넘긴다(.ads__t가 좌우 여백을 갖는다) */
+.g3 .linkbtn,.g3__app{margin-top:var(--sp-5)}
+.g3__app{align-self:center;text-decoration:none}
+
+
+/* ── 시연 도구 — ?demo=1 또는 빈 곳 0.8초 길게 누르기 (발표자만) ── */
+.demo{position:absolute;inset:0;z-index:40;display:none}
+.demo.is-open{display:block}
+.demo__scrim{position:absolute;inset:0;background:rgba(25,31,40,.4)}
+.demo__panel{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;
+  background:var(--surface);border-radius:var(--r-sheet) var(--r-sheet) 0 0;box-shadow:var(--shadow-sheet);
+  padding:var(--sp-4) var(--page-x) calc(var(--sp-8) + env(safe-area-inset-bottom,0px))}
+.demo__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2)}
+.demo__title{font:var(--t-title) var(--font)}
+.demo__g{padding:var(--sp-3) 0;border-bottom:1px solid var(--line)}
+.demo__g:last-child{border-bottom:0}
+.demo__k{display:block;font:600 12.5px/1.4 var(--font);color:var(--text-sub);margin-bottom:var(--sp-2)}
+.demo__row{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.demo__row .chip{min-height:34px}
+.demo__nums{display:flex;flex-direction:column}
+.demo__num{display:flex;align-items:center;gap:var(--sp-3);min-height:44px;width:100%;
+  border-bottom:1px solid var(--gray-100);text-align:left;font:var(--t-body) var(--font)}
+.demo__num:last-child{border-bottom:0}
+.demo__num:active{background:var(--pressed)}
+.demo__num span{flex:1;min-width:0;color:var(--text-sub);font-variant-numeric:tabular-nums}
+.demo__num b{font:700 17px/1 var(--mono);letter-spacing:.06em}
+.demo__danger{font:600 14.5px/1.4 var(--font);color:var(--danger-700);min-height:44px;padding:0}
