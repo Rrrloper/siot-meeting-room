@@ -1,5 +1,5 @@
 /* ============================================================
-   site.css — 현장 웹(G-01 번호 확인 · G-02 제어 | 안내 · G-03 이용 끝)
+   site.css — 유저 웹(G-01 번호 확인 · G-02 제어 | 안내 · G-03 이용 끝)
    SIOT 신설 「회의실 예약 솔루션」의 세 번째 갈래. 앱 토큰 · 부품을 그대로 쓴다.
    로드 순서: tokens.css → components.css → app.css → site.css
    hex 리터럴 0개 — 색은 tokens.css만 (theme-color meta만 예외).
@@ -72,6 +72,8 @@ html.is-preview .statusbar,html.is-preview .homebar{display:none}
 html.is-preview .stabs__b{cursor:default}
 
 .hero--site{padding-top:var(--sp-4)}
+/* 30분 연장 | 퇴실하기 — 2열 칸 고정. 관리자가 하나를 끄면 남은 버튼이 왼쪽 반 칸(앱 추가 버튼 줄과 같은 규칙) */
+.hero--site .btnrow{display:grid;grid-template-columns:1fr 1fr}
 
 /* 문 열기 — QR · 리더기 방 · 3초 뒤 잠김. 카드 한 장 폭 전체 */
 .dcard--door{min-height:0;gap:var(--sp-3)}

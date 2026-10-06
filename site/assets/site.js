@@ -1,6 +1,6 @@
 /* ============================================================
-   site.js — 현장 웹 (SIOT 신설 「회의실 예약 솔루션」 · 앱 없이 QR로 들어와 제어 · 안내)
-   정본: ../현장웹_기획.md §1–4 · §7 · §8
+   site.js — 유저 웹 (SIOT 신설 「회의실 예약 솔루션」 · 앱 없이 QR로 들어와 제어 · 안내)
+   정본: ../유저웹_기획.md §1–4 · §7 · §8
    ------------------------------------------------------------
    ES 모듈 아님 · 프레임워크 없음 · app.js / mock.js를 읽지 않는다(필요한 규칙만 옮겼다).
 
@@ -8,20 +8,24 @@
      G-01 번호 확인 — 인증 전에는 회의실 이름 · 그룹 · 지금 상태만(개인 정보 없음)
      주의사항 시트 — 인증 직후 한 번(그 회의실 주의사항이 있을 때만)
      G-02 이용 — 탭 「제어 | 안내」. 제어는 앱 S-14와 같은 규칙(낙관적 UI 없음 · 문 열기 3초 뒤 잠김 · 30분 연장 · 퇴실)
-     G-03 이용 끝 — 퇴실 · 예약 시간 끝 두 가지
+                 30분 연장 · 퇴실은 관리자 web이 끌 수 있다(공통 · 회의실 개별) — 끈 기능은 버튼이 없다
+     G-03 이용 끝 — 퇴실 · 예약 시간 끝 두 가지. 퇴실하지 않고 끝나면 종료 시각에 퇴실 자동화가 저절로 돈다(앱과 같은 규칙)
 
    주소
      ?r=MA13-2&c=482915   현황판 QR — 코드는 실제 시계로 5분마다 바뀐다(지금 · 바로 전 코드만 받는다)
      ?r=PB-A              스티커 QR — 현황판이 없는 방(코드 없음)
      ?t=1605              시연 시각(없으면 14:18) — 시연 도구가 붙인다
-     ?preview=1&r=ID&tab=info   관리자 web A-12 드로어 미리보기 — 인증 없이 G-02 「안내」, 저장소에 쓰지 않는다
+     ?preview=1&r=ID&tab=info   관리자 web A-12 드로어 미리보기 — 인증 없이 G-02 「안내」(tab=ctl이면 「제어」), 저장소에 쓰지 않는다
                                  postMessage({type:'site-content', data:<siot.mr.site.v1 모양> | null}) · ({type:'site-room', r})
+                                 · ({type:'site-tab', tab:'info'|'ctl'})
                                  준비되면 parent에 {type:'site-ready', r}
      ?demo=1              시연 도구 바로 열기(빈 곳 0.8초 길게 누르기와 같다)
 
    저장소(같은 origin localhost:8105에서 관리자 web과 공유 — 제품에서는 서버가 갖는다)
-     siot.mr.site.v1         { v:1, rooms:{ 회의실 이름:{ notices:[N], cautions:[C] } }, common:{ notices:[N] }, ads:[A] }
+     siot.mr.site.v1         { v:1, rooms:{ 회의실 이름:{ notices:[N], cautions:[C], fn?:{ extend, checkout } } },
+                               common:{ notices:[N], fn?:{ extend, checkout } }, ads:[A] }
                              키가 아예 없을 때만 처음 값(SITE_SEED) · 있으면 그대로(rooms에 없는 방 = 비움)
+                             fn = 30분 연장 · 퇴실 켬/끔 — 회의실 fn이 있으면 그것(개별), 없으면 common.fn, 그것도 없으면 모두 켬
      siot.mr.sitesession.v1  { 회의실 ID:{ name, start, end, at, seen?, out? } } — 이 폰의 인증. 종료 시각(연장하면 함께)까지
                              seen = 본 공지 id(안내 탭 점) · out = 퇴실 시각
      siot.mr.sitelock.v1     { 회의실 ID:{ fails, until } } — 5회 연속 실패 → 5분 잠금(until = 실제 시계 ms)
@@ -37,13 +41,14 @@
   var CLOSE_MIN = 19 * 60;                /* 운영 시간 끝(회의실 기본값 09:00–19:00) */
   var EXTEND_MIN = 30;                    /* 30분 연장 — 뒤 30분이 비어 있고 운영 시간 안일 때만 (57차) */
   var LOCK_FAILS = 5, LOCK_MS = 5 * 60 * 1000;
+  var DEMO_N4 = '1111';                   /* 시연용 만능 번호 — 누구의 예약이든 뒤 4자리 대신 받는다. 시간 창 · QR 코드 · 잠금 규칙은 그대로. 제품에는 없다 (83차) */
   var CONFIRM_MS = 1200, FAIL_MS = 3000, DOOR_RELOCK_MS = 3000, AUTO_MS = 1600;
   var K_SITE = 'siot.mr.site.v1', K_SESS = 'siot.mr.sitesession.v1', K_LOCK = 'siot.mr.sitelock.v1';
   var DEFAULT_ROOM = 'MA13-2';
   /* 「앱으로 열기 · SIOT 앱 받기」 — 프로토타입은 앱 시안으로. 배포판(_build.cjs)은 시연 앱 주소로 바꾼다 · 제품은 유니버설 링크 */
   var APP_URL = '../'; /* @build:app-url */
 
-  /* 현황판과 같은 코드 — 5분마다 바뀐다 (현장웹_기획.md §4 · 태블릿_예약현황.html codeNow) */
+  /* 현황판과 같은 코드 — 5분마다 바뀐다 (유저웹_기획.md §4 · 태블릿_예약현황.html codeNow) */
   function codeNow(t) { var slot = Math.floor((t || Date.now()) / 300000); var x = (slot * 2654435761 + 97) >>> 0; return String(100000 + (x % 900000)); }
 
   /* ── 데이터 — 관리자 web(A-02 회의실 상세 · A-03 예약 · 현황판)과 같은 방 · 같은 예약 ──
@@ -122,9 +127,9 @@
         notices: [{ id: 'N-1302-1', title: 'HDMI 케이블 위치', body: '화상 장비 HDMI 케이블은 책상 서랍에 있어요', from: '2026-09-01', to: '2026-09-30' }],
         cautions: [{ id: 'C-1302-1', text: '뚜껑 있는 음료만 들고 와 주세요' }, { id: 'C-1302-2', text: '퇴실할 때 화이트보드를 지워 주세요' }, { id: 'C-1302-3', text: '창문은 열지 마세요(공조)' }]
       },
-      'MA11-1 대회의실': { notices: [], cautions: [{ id: 'C-1101-1', text: '대회의실 마이크는 퇴실할 때 충전대에' }] }
+      'MA11-1 대회의실': { notices: [], cautions: [{ id: 'C-1101-1', text: '대회의실 마이크는 퇴실할 때 충전대에' }], fn: { extend: false, checkout: true } }
     },
-    common: { notices: [{ id: 'N-C-1', title: '9/12(토) 11층 공조 점검', body: '10:00–11:00 냉난방이 멈춰요', from: '2026-09-01', to: '2026-09-12' }] },
+    common: { notices: [{ id: 'N-C-1', title: '9/12(토) 11층 공조 점검', body: '10:00–11:00 냉난방이 멈춰요', from: '2026-09-01', to: '2026-09-12' }], fn: { extend: true, checkout: true } },
     ads: [
       { id: 'A-1', title: '사내 카페 가을 신메뉴 · 2층', img: null, link: '', from: '2026-09-01', to: '2026-09-30' },
       { id: 'A-2', title: '10월 사내 봉사활동 신청', img: null, link: '', from: '2026-09-01', to: '2026-10-31' }
@@ -249,14 +254,24 @@
       RT.dev.push(o);
     });
 
-    /* 이 폰에 세션이 있으면 그 예약은 이미 입실 · 연장된 끝 시각 · 퇴실을 되살린다 */
+    /* 이 폰에 세션이 있으면 그 예약은 이미 입실 · 연장된 끝 시각 · 퇴실(퇴실 없이 끝났으면 종료 시각의 퇴실 자동화)을 되살린다 */
     var ss = sess(), r = ss && sessRsv(ss);
     if (r) {
       var en = fromIso(ss.end);
       if (en > r.e) r.e = en;
       if (r.wait) { r.wait = false; runAuto(room.btns[0][1]); }
       if (ss.out) { r.done = true; runAuto(room.btns[1][1]); }
+      else autoOut();
     }
+  }
+
+  /* 종료 시각까지 퇴실하지 않은 예약 — 종료 시각에 퇴실 자동화를 한 번 실행한다(앱과 같은 규칙 · 제품에서는 서버가 종료 시각에).
+     시연 시각을 끝 뒤로 옮기거나 끝난 뒤 다시 열 때. G-03 문구는 「예약 시간이 끝났어요」 그대로(ss.out을 쓰지 않는다) */
+  function autoOut() {
+    var ss = sess(), r = ss && sessRsv(ss);
+    if (!r || ss.out || r.autoOut || S.now < fromIso(ss.end)) return;
+    r.autoOut = true;
+    runAuto(room.btns[1][1]);
   }
 
   function current() { return RT ? RT.rsv.filter(function (r) { return !r.done && r.s <= S.now && S.now < r.e; })[0] || null : null; }
@@ -326,6 +341,12 @@
     var d = load(K_SITE);
     return d && typeof d === 'object' && !Array.isArray(d) ? d : SITE_SEED;
   }
+  /* 30분 연장 · 퇴실 켬/끔 — 회의실 fn(개별)이 있으면 그것, 없으면 common.fn(공통), 그것도 없으면 모두 켬 · 빠진 값도 켬 */
+  function fnOf() {
+    var d = siteData(), rm = room && d.rooms && typeof d.rooms === 'object' ? d.rooms[room.name] : null;
+    var f = rm && rm.fn && typeof rm.fn === 'object' ? rm.fn : (d.common && d.common.fn && typeof d.common.fn === 'object' ? d.common.fn : {});
+    return { extend: f.extend !== false, checkout: f.checkout !== false };
+  }
   function inPeriod(x) { var f = x.from || '', t = x.to || ''; return (!f || f <= DAY) && (!t || DAY <= t); }
   function hasText(n) { return String(n.title || '').trim() || String(n.body || '').trim(); }
   function content() {
@@ -368,6 +389,7 @@
 
   function render() {
     $('#statusTime').textContent = hm(S.now);
+    if (room) autoOut();
     var v = view();
     var key = v + '|' + S.tab + '|' + S.rid;
     var old = $('.screen__body', screen);
@@ -456,9 +478,9 @@
     if (g1Mode() !== 'form') { render(); return; }   /* 그새 코드가 바뀌었으면 만료 화면 */
     var d = S.digits, cur = current();
     S.digits = '';
-    if (cur && cur.n4 === d) { auth(cur); return; }
+    if (cur && (cur.n4 === d || d === DEMO_N4)) { auth(cur); return; }
     /* 시작 전 — 이 방의 다가오는 예약과 맞으면 그 예약 본인이니 시각만 알린다(인증하지 않음 · 실패로 세지 않음) */
-    var early = upcoming().filter(function (r) { return r.n4 === d; })[0];
+    var early = upcoming().filter(function (r) { return r.n4 === d || d === DEMO_N4; })[0];
     if (early) { S.msg = { tone: 'wait', text: hm(early.s) + '부터 입실할 수 있어요' }; S.focus = true; render(); return; }
     /* 틀림 — 번호인지 시간인지 말하지 않는다 · 남은 횟수도 보이지 않는다 */
     var l = lockGet();
@@ -512,26 +534,32 @@
     return appLink() + tabs + '<div class="screen__body" role="tabpanel">' + (S.tab === 'ctl' ? ctlHtml(r) : infoHtml()) + '</div>';
   }
 
-  /* 이 폰이 인증한 예약 — 미리보기는 인증이 없으니 지금 예약(제어 탭을 요청했을 때만) */
+  /* 이 폰이 인증한 예약 — 미리보기는 인증이 없으니 지금 예약(제어 탭을 요청했을 때만).
+     지금 예약이 없는 방도 관리자가 제어 탭 머리를 볼 수 있게 미리보기에서만 「지금 시각이 든 1시간」을 꾸민다(RT.rsv에 넣지 않음) */
   function activeRsv() {
-    if (PREVIEW) return current();
+    if (PREVIEW) {
+      var cur = current();
+      if (cur) return cur;
+      var s = Math.floor(S.now / 60) * 60;
+      return { s: s, e: s + 60, who: '', n4: '', wait: false, done: false };
+    }
     var ss = sess();
     return ss ? sessRsv(ss) : null;
   }
 
   function ctlHtml(r) {
     var total = r.e - r.s, pct = Math.min(100, Math.max(0, Math.round((S.now - r.s) / total * 100)));
-    var ext = extendCheck(r);
-    /* 머리 — 앱 S-14와 같다: 이름 + 상태 한 줄 · 그룹 + 시간 · 진행 바 · 30분 연장 | 퇴실하기 */
+    var ext = extendCheck(r), fn = fnOf();
+    /* 머리 — 앱 S-14와 같다: 이름 + 상태 한 줄 · 그룹 + 시간 · 진행 바 · 30분 연장 | 퇴실하기.
+       관리자가 끈 기능은 버튼을 두지 않는다(흐린 버튼은 「다음 예약이 있어」 같은 그때의 막힘 몫) — 하나면 2열의 왼쪽 칸, 둘 다 끄면 줄째 없음 */
+    var btns = (fn.extend ? '<button class="btn btn--sm btn--secondary' + (ext.ok ? '' : ' is-blocked') + '" data-extend>30분 연장</button>' : '') +
+      (fn.checkout ? '<button class="btn btn--sm btn--danger" data-exit>퇴실하기</button>' : '');
     var hero = '<div class="hero hero--site">' +
       '<div class="hero__top"><h1 class="hero__name">' + esc(room.name) + '</h1>' +
         '<span class="status status--brand">사용 중 · ' + esc(leftLabel(r.e - S.now)) + ' 남음</span></div>' +
       '<p class="hero__meta tnum">' + esc(room.floor + ' · ' + hm(r.s) + '–' + hm(r.e)) + '</p>' +
       '<div class="elapsed"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="btnrow">' +
-        '<button class="btn btn--sm btn--secondary' + (ext.ok ? '' : ' is-blocked') + '" data-extend>30분 연장</button>' +
-        '<button class="btn btn--sm btn--danger" data-exit>퇴실하기</button>' +
-      '</div>' +
+      (btns ? '<div class="btnrow">' + btns + '</div>' : '') +
     '</div>';
 
     var cards = deviceCards(), autos = autoRow();
@@ -553,7 +581,7 @@
   }
   function doExtend() {
     var r = activeRsv();
-    if (!r) return;
+    if (!r || !fnOf().extend) return;   /* 관리자가 끈 기능 — 버튼이 없어도 요청은 막는다(제품 서버도 이 요청을 거절해야 한다) */
     var ch = extendCheck(r);
     if (!ch.ok) { toast(ch.reason); return; }
     if (PREVIEW) return;
@@ -566,7 +594,7 @@
 
   /* 퇴실 = 「퇴실」 버튼에 매핑한 자동화 실행 → G-03. 매핑이 없는 방이면 기기 이야기를 하지 않는다 */
   function confirmExit() {
-    if (PREVIEW) return;
+    if (PREVIEW || !fnOf().checkout) return;   /* 관리자가 끈 기능 — 제품 서버도 이 요청을 거절해야 한다 */
     var auto = room.btns[1][1];
     openSheet({
       title: '퇴실할까요',
@@ -575,7 +603,8 @@
         label: '퇴실하기', kind: 'danger',
         onClick: function () {
           var r = activeRsv(), ss = sess();
-          if (!r || !ss) return;
+          /* 시트를 연 사이 관리자가 껐거나 종료 시각이 지나 퇴실 자동화가 이미 돌았으면 하지 않는다 */
+          if (!r || !ss || r.autoOut || !fnOf().checkout) return;
           runAuto(auto);
           r.done = true;
           ss.out = iso(S.now);
@@ -844,7 +873,7 @@
     return '<button type="button" class="chip' + (on ? ' is-selected' : '') + (off ? ' is-disabled' : '') + '" ' + attrs + '>' + esc(label) + '</button>';
   }
   function renderDemo() {
-    var k = qrKind(), sg = room && room.signage;
+    var k = qrKind(), sg = room && room.signage, fn = room ? fnOf() : null;
     $('#demo').innerHTML =
       '<div class="demo__scrim" data-demo-close></div>' +
       '<div class="demo__panel">' +
@@ -860,9 +889,14 @@
           TIMES.map(function (t) { return chip(S.now === t[0], 'data-demo-time="' + t[0] + '"', t[1]); }).join('') + '</div></div>' +
         '<div class="demo__g"><span class="demo__k">기기 응답</span><div class="demo__row">' +
           chip(!S.devFail, 'data-demo-dev="ok"', '정상') + chip(S.devFail, 'data-demo-dev="fail"', '응답 없음') + '</div></div>' +
+        (fn ? '<div class="demo__g"><span class="demo__k">기능 · ' + esc(room.name) + '</span><div class="demo__row">' +
+          chip(fn.extend, 'data-demo-fn="extend"', '30분 연장 ' + (fn.extend ? '켬' : '끔')) +
+          chip(fn.checkout, 'data-demo-fn="checkout"', '퇴실 ' + (fn.checkout ? '켬' : '끔')) + '</div></div>' : '') +
         '<div class="demo__g"><span class="demo__k">데모 번호 · ' + esc(room ? room.name : S.rid) + '</span>' +
           (RT && RT.rsv.length
-            ? '<div class="demo__nums">' + RT.rsv.map(function (r) {
+            ? '<div class="demo__nums">' +
+                '<button type="button" class="demo__num" data-demo-num="' + DEMO_N4 + '"><span>시연용 · 지금 예약 누구든</span><b>' + DEMO_N4 + '</b></button>' +
+                RT.rsv.map(function (r) {
                 return '<button type="button" class="demo__num" data-demo-num="' + esc(r.n4) + '"><span>' + esc(r.who + ' · ' + hm(r.s) + '–' + hm(r.e)) + '</span><b>' + esc(r.n4) + '</b></button>';
               }).join('') + '</div>'
             : '<p class="note">오늘 예약이 없어요</p>') + '</div>' +
@@ -904,6 +938,19 @@
       S.msg = null; syncUrl(); render(); return true;
     }
     if ((b = t.closest('[data-demo-dev]'))) { S.devFail = b.getAttribute('data-demo-dev') === 'fail'; render(); return true; }
+    /* 기능 켬/끔 — 시연 폰은 관리자 web과 저장소를 나누지 않으니 이 폰의 siot.mr.site.v1에 그 방 개별 값(fn)으로 쓴다 */
+    if ((b = t.closest('[data-demo-fn]'))) {
+      if (!room) return true;
+      var key = b.getAttribute('data-demo-fn'), sd = load(K_SITE);
+      if (!sd || typeof sd !== 'object' || Array.isArray(sd)) sd = JSON.parse(JSON.stringify(SITE_SEED));   /* 키가 없으면 처음 값부터 */
+      if (!sd.rooms || typeof sd.rooms !== 'object') sd.rooms = {};
+      var rm = sd.rooms[room.name];
+      if (!rm || typeof rm !== 'object') rm = sd.rooms[room.name] = { notices: [], cautions: [] };
+      var fv = fnOf();
+      fv[key] = !fv[key];
+      rm.fn = fv;
+      save(K_SITE, sd); render(); return true;
+    }
     if ((b = t.closest('[data-demo-num]'))) {
       S.digits = b.getAttribute('data-demo-num'); S.msg = null; S.focus = true;
       closeDemo(); render(); return true;
@@ -962,11 +1009,12 @@
 
     /* 제어 */
     if ((b = t.closest('[data-extend]'))) {
+      if (!fnOf().extend) return;   /* 관리자가 끈 기능 — 버튼이 없어도 요청은 막는다(제품 서버도 거절해야 한다) */
       var r0 = activeRsv();
       if (r0 && b.classList.contains('is-blocked')) { toast(extendCheck(r0).reason); return; }   /* 흐린 버튼 — 누르면 이유만 */
       doExtend(); return;
     }
-    if (t.closest('[data-exit]')) { confirmExit(); return; }
+    if (t.closest('[data-exit]')) { confirmExit(); return; }   /* 끈 기능이면 confirmExit가 막는다 */
     if (t.closest('[data-door]')) {
       var dd = RT.door;
       if (!dd || !dd.locked) return;   /* 이미 열려 있으면 곧 저절로 잠긴다 */
@@ -1070,12 +1118,13 @@
     render();
   });
 
-  /* 미리보기 — 관리자 web 드로어의 저장 전 편집값 */
+  /* 미리보기 — 관리자 web 드로어의 저장 전 편집값 · 방 · 탭(드로어 위 「안내 | 제어」) */
   window.addEventListener('message', function (e) {
     if (!PREVIEW || e.origin !== location.origin) return;
     var d = e.data || {};
     if (d.type === 'site-content') { S.override = d.data && typeof d.data === 'object' && !Array.isArray(d.data) ? d.data : null; render(); }
     else if (d.type === 'site-room' && typeof d.r === 'string') { setRoom(d.r); render(); }
+    else if (d.type === 'site-tab') { S.tab = d.tab === 'ctl' ? 'ctl' : 'info'; render(); }
   });
 
   /* 잠금 시계 · 현황판 코드 만료 — 1초마다(G-01일 때만 고친다) */
