@@ -836,6 +836,100 @@
   }
 
 
+  /* ── 08i 공지 · 주의사항 (2026-10-06 85차 · 87차 공지 저장소 하나) ──────────────────
+     관리자가 쓴 공지 · 주의사항을 앱 이용자도 본다 — 홈 맨 위 「공지」 한 줄(전체 공지) ·
+     제어 페이지 「공지 N · 주의사항 N」 줄과 「안내」 시트 · 사용 중으로 처음 열 때 「이 회의실 이용 전에」 시트(예약마다 한 번).
+       공지 저장소         siot.mr.notices.v1 { v:1, notices:[N] } — 관리자 web 「공지」가 쓰고 유저 웹 · 앱이 같이 읽는다(87차).
+                          키가 아예 없으면 web · 유저 웹과 같은 처음 값(NOTICE_SEED). 회사마다 — web 회사(대양씨아이에스)만
+       앱에 나가는 공지     게시 중(빈 날짜는 제한 없음 · 오늘 = 앱 기준 9/6) · 제목이나 본문 있음 · channels.app
+         전체 공지          target.kind 'all' — 홈 줄 · 안내 시트 「전체 공지」
+         회의실 공지         kind ≠ 'all' 이고 target.rooms에 그 회의실 id(88차 — 옛 값은 회의실 이름이라 이름도 받는다 ·
+                          groups로 고른 공지도 web이 rooms를 함께 적는다) + 앱 더미(ROOM_NOTES).
+                          프로토타입은 web 더미 회의실(MA13-2 …)과 앱 회의실(SP-03 브레인스토밍룸 …)이 달라 저장소 공지는 거의 붙지 않는다
+         예약할 때(88차)     홈 · 탐색 펼친 줄 「공지」 = 같은 회의실 공지 중 예약 날짜에 게시 중인 것(bookNotes) · 전체 공지는 빼고
+       주의사항            앱 더미(ROOM_NOTES)만 — 제품은 관리자 web 회의실 상세 › 안내의 같은 서버 데이터를 읽는다
+       공지 미리보기        관리자 web 「공지」의 폰 미리보기(?still=1&noticepreview=1) — previewNotices(list)를 받으면 저장소 대신 그 목록.
+                          게시 기간은 보지 않고(관리자가 보낸 그대로 · web 오늘과 앱 오늘이 다르다) kind ≠ 'all'은 rooms와 상관없이
+                          보이는 회의실의 공지로 · 앱 더미 회의실 공지는 빼고 주의사항은 그대로. null이면 다시 저장소
+     공지 N = { id, title, body, from:'YYYY-MM-DD'|'', to, target:{ kind, groups, rooms }, channels:{ app, web } } · 주의사항 = { id, text }.
+     앱에만 있는 데모 회사((주)한빛산업 · (주)새움테크)는 공지 · 주의사항이 없다 */
+
+  var NOTICE_KEY = 'siot.mr.notices.v1';
+  var NOTICE_SEED = [   /* 관리자 web 「공지」 · 유저 웹 NOTICE_SEED와 id까지 같다 (87차 · 88차 rooms = 회의실 id) */
+    { id: 'N-1', title: '추석 연휴 회의실 운영', body: '9/24(목)–9/26(토)에는 예약을 받지 않아요', from: '2026-09-01', to: '2026-09-26', target: { kind: 'all', groups: [], rooms: [] }, channels: { app: true, web: true } },
+    { id: 'N-2', title: '10/3(토) 전 층 회의실 소독', body: '09:00–18:00 회의실을 쓸 수 없어요', from: '2026-09-01', to: '2026-10-03', target: { kind: 'all', groups: [], rooms: [] }, channels: { app: true, web: true } },
+    { id: 'N-3', title: '9/12(토) 11층 공조 점검', body: '10:00–11:00 냉난방이 멈춰요', from: '2026-09-01', to: '2026-09-12', target: { kind: 'groups', groups: ['G-14'], rooms: ['PB-A', 'PB-B', 'MA11-1', 'MA11-2'] }, channels: { app: true, web: true } },
+    { id: 'N-4', title: 'HDMI 케이블 위치', body: '화상 장비 HDMI 케이블은 책상 서랍에 있어요', from: '2026-09-01', to: '2026-09-30', target: { kind: 'rooms', groups: [], rooms: ['MA13-2'] }, channels: { app: true, web: true } },
+    { id: 'N-5', title: '방문객 와이파이', body: 'SIOT-Guest · 비밀번호는 안내 데스크에 물어 주세요', from: '', to: '', target: { kind: 'all', groups: [], rooms: [] }, channels: { app: false, web: true } }
+  ];
+  var noticePreview = null;   /* 관리자 web 「공지」 미리보기가 보낸 목록 — 저장소에 쓰지 않는다 */
+  var ROOM_NOTES = {
+    DY: {
+      /* 홈 「사용 중」 카드(RSV-3301)의 방 — 공지 1 · 주의사항 3 */
+      'SP-03': {
+        notices: [{ id: 'N-SP03-1', title: '모니터 HDMI 케이블 위치', body: 'HDMI 케이블은 모니터 아래 서랍에 있어요', from: '2026-09-01', to: '2026-09-30' }],
+        cautions: [{ id: 'C-SP03-1', text: '뚜껑 있는 음료만 들고 와 주세요' },
+                   { id: 'C-SP03-2', text: '퇴실할 때 화이트보드를 지워 주세요' },
+                   { id: 'C-SP03-3', text: '창문은 열지 마세요(공조)' }]
+      },
+      'SP-04': {
+        /* 날짜가 있는 회의실 공지 — 9/6–9/8에 예약하면 펼친 줄에 「공지」가 보이고 9/9부터는 없다 (88차) */
+        notices: [{ id: 'N-SP04-1', title: '9/8(화) 빔프로젝터 점검', body: '10:00–12:00 빔프로젝터를 쓸 수 없어요', from: '2026-09-01', to: '2026-09-08' }],
+        cautions: [{ id: 'C-SP04-1', text: '빔프로젝터 리모컨은 교탁 서랍에 두고 가 주세요' },
+                   { id: 'C-SP04-2', text: '의자 배치를 바꿨다면 원래대로 돌려 주세요' }]
+      },
+      'SP-06': {
+        notices: [],
+        cautions: [{ id: 'C-SP06-1', text: '통화는 폰부스를 써 주세요' }]
+      }
+    }
+  };
+
+  /* 게시 기간 — d('YYYY-MM-DD')가 from ~ to 안(빈 값은 제한 없음). inPeriod = 앱 오늘 */
+  function onDay(n, d) { return (!n.from || n.from <= d) && (!n.to || d <= n.to); }
+  function inPeriod(n) { return onDay(n, ymd(NOW)); }
+  function hasText(n) { return !!(String(n.title || '').trim() || String(n.body || '').trim()); }
+  function listOf(v) { return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : []; }
+
+  /** 앱에 나가는 공지 — all이면 전체 공지(kind 'all'), 아니면 회의실 공지(kind ≠ 'all'). web 회사만. day가 있으면 그 날 게시 중인 것 */
+  function appNotices(all, day) {
+    if (curCo !== 'DY') return [];
+    var src = noticePreview, d = day || ymd(NOW);
+    if (!src) { var j = readJSON(NOTICE_KEY); src = j && typeof j === 'object' && !Array.isArray(j) ? listOf(j.notices) : NOTICE_SEED; }
+    return src.filter(function (n) {
+      var tg = n.target && typeof n.target === 'object' ? n.target : {};
+      if (!(n.channels && n.channels.app === true) || !hasText(n) || (!noticePreview && !onDay(n, d))) return false;
+      return all ? tg.kind === 'all' : tg.kind !== 'all';
+    });
+  }
+  /** 저장소 공지가 이 회의실을 골랐는가 — target.rooms에 회의실 id(88차). 88차 전에 쓴 값은 회의실 이름이라 이름도 받는다 */
+  function forRoom(n, spaceId) {
+    var rooms = n.target && Array.isArray(n.target.rooms) ? n.target.rooms : [], name = spaceName(spaceId);
+    return rooms.indexOf(spaceId) !== -1 || (!!name && rooms.indexOf(name) !== -1);
+  }
+  /** 지금 게시 중인 전체 공지 — 고른 회사 것만 */
+  function commonNotices() { return appNotices(true); }
+  /** 이 회의실의 공지(게시 중 — 앱 더미 + 저장소에서 이 회의실을 고른 것) · 주의사항 */
+  function roomNotes(spaceId) {
+    var r = (ROOM_NOTES[curCo] || {})[spaceId] || {};
+    var stored = appNotices(false).filter(function (n) { return noticePreview || forRoom(n, spaceId); });
+    return {
+      notices: (noticePreview ? [] : listOf(r.notices).filter(inPeriod).filter(hasText)).concat(stored),
+      cautions: listOf(r.cautions).filter(function (c) { return String(c.text || '').trim(); })
+    };
+  }
+  /** 예약하는 날의 이 회의실 공지 (88차 사용자 결정 ③) — 홈 · 탐색 펼친 줄의 「공지」 한 줄과 시트.
+      roomNotes와 같은 원천(앱 더미 + 저장소 kind ≠ 'all' · channels.app)이되 오늘이 아니라 예약 날짜(day)에 게시 중인 것.
+      전체 공지는 넣지 않는다(홈 맨 위 줄이 갖는다) */
+  function bookNotes(spaceId, day) {
+    var d = typeof day === 'string' ? day : ymd(day || NOW), r = (ROOM_NOTES[curCo] || {})[spaceId] || {};
+    var stored = appNotices(false, d).filter(function (n) { return noticePreview || forRoom(n, spaceId); });
+    return (noticePreview ? [] : listOf(r.notices).filter(function (n) { return onDay(n, d); }).filter(hasText)).concat(stored);
+  }
+  /** 관리자 web 「공지」 미리보기 — 목록을 주면 저장소 대신 그것을 쓴다 · null이면 저장소로 */
+  function previewNotices(list) { noticePreview = Array.isArray(list) ? listOf(list) : null; }
+
+
   /* ── 09 상태 문구 사전 (§15) — 화면이 문구를 지어내지 않게 ── */
 
   var statusText = {
@@ -1326,6 +1420,9 @@
       useCompany: useCompany, setMe: setMe, companyKey: function () { return curCo; },   /* 회사 전환 · 나 (72차) */
       myNotifications: myNotifications, cancelMine: cancelMine,
       readNotify: readNotify, savePush: savePush,   /* 알림 — web 정책 + 이 폰 설정 (70차) */
+      commonNotices: commonNotices, roomNotes: roomNotes, NOTICE_KEY: NOTICE_KEY,   /* 공지 · 주의사항 (85차 · 87차 저장소 siot.mr.notices.v1) */
+      bookNotes: bookNotes,   /* 예약하는 날의 회의실 공지 — 홈 · 탐색 펼친 줄 (88차) */
+      previewNotices: previewNotices,   /* 관리자 web 「공지」 미리보기 (87차) */
       runAutomation: runAutomation, DOOR_RELOCK_MS: DOOR_RELOCK_MS,   /* 입실 · 퇴실 자동화 · 도어 모델 (66차) */
       myReservations: myReservations,
       currentReservation: currentReservation,

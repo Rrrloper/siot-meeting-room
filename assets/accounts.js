@@ -22,7 +22,7 @@
                appliedAt ISO · decidedAt ISO|null · rejectReason(반려는 사유 필수)
      siot.mr.org.v1      { v:1, depts:[{ id, name, parent, order }], ranks:[{ id, name, order }] }   web 설정(A-08)이 쓴다
                부서는 무한 단계 트리(parent = 상위 id | null) · 직급은 서열(order 0 = 가장 낮음)
-     siot.mr.company.v1  { v:1, code }                web 설정(A-08)이 쓴다 — 그 web 회사의 회사코드
+     siot.mr.company.v1  { v:1, code }                그 web 회사의 회사코드 — 회사 개설 때 백엔드가 정한다. 관리자 web(A-08)은 보기만(91차) · 프로토타입은 처음 값
      siot.mr.session.v1  { v:1, userId|null, co }     앱 전용(이 폰) — 로그인한 계정 · 고른 회사코드
      siot.mr.inbox.v1    { v:1, read:{ id:true } }    앱 전용(이 폰) — 가입 결과 알림을 읽었는지 (74차)
    74차 더한 것
@@ -79,7 +79,7 @@
   /* ── 회사 ─────────────────────────────────────────────────── */
 
   var WEB_DEFAULT = 'DYCIS-2026';
-  /** 관리자 web 회사의 지금 회사코드 — 설정(A-08)이 저장한 값, 없으면 처음 값 */
+  /** 관리자 web 회사의 회사코드 — 저장소 값(91차부터 쓰는 화면 없음 · 옛 값이 남아 있으면 그 값), 없으면 처음 값 */
   function webCode() {
     var o = readJSON(CKEY);
     return String((o && o.code) || WEB_DEFAULT).trim().toUpperCase();

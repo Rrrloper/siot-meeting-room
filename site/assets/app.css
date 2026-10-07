@@ -97,6 +97,9 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .appbar__mid{flex:1;min-width:0;font:700 17px/1.4 var(--font);text-align:center}
 .appbar__trail{display:flex;align-items:center;gap:var(--sp-1);flex:none}
 .appbar .iconbtn{margin:0 -10px}
+/* 오른쪽 아이콘이 둘 이상이면(탐색 돋보기 + QR · 내 예약 종 + QR) 44px 영역을 겹치지 않고 나란히 — 바깥 끝만 10px 밖으로 (90차) */
+.appbar__trail .iconbtn:has(+ .iconbtn:not([hidden])){margin-right:0}
+.appbar__trail .iconbtn + .iconbtn{margin-left:calc(-1 * var(--sp-1))}
 
 
 /* ── 브랜드 (고객사 로고 · 관리자 페이지가 바꾼다) ─────────── */
@@ -122,15 +125,9 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .tabbar__label{font:500 11.5px/1 var(--font)}
 .tabbar__item.is-active{color:var(--brand-active)}
 .tabbar__item.is-active .tabbar__label{font-weight:600}
-/* 가운데 체크인 버튼 — 떠 있는 검정 원형(떠 있는 것만 그림자) */
-.tabbar__scan{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  gap:var(--sp-1);min-height:44px;color:var(--text);font-weight:600}
-.tabbar__ball{position:absolute;top:-30px;width:58px;height:58px;border-radius:var(--r-full);
-  background:var(--gray-900);color:var(--gray-0);display:flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 20px rgba(25,31,40,.28),0 0 0 5px var(--surface);
-  transition:background var(--dur-fast) var(--ease)}
-.tabbar__ball .icon{width:26px;height:26px}
-.tabbar__scan:active .tabbar__ball{background:var(--gray-700)}
+/* QR 체크인 — 탭 화면 오른쪽 위 아이콘 하나(바탕 · 테두리 없음 · 누르는 영역 44px · 카카오톡형 · 2026-10-07 90차).
+   다른 아이콘이 있는 줄(탐색 돋보기 · 내 예약 종)에서는 맨 오른쪽 — QR 자리가 탭마다 같다. 26차의 탭바 가운데 검정 원형을 대신한다 */
+.iconbtn--qr .icon{width:26px;height:26px}
 @media (max-width:767px){
   .tabbar{padding-bottom:calc(var(--sp-6) + env(safe-area-inset-bottom,0px))}
 }
@@ -152,12 +149,29 @@ input,textarea{user-select:text;-webkit-user-select:text}
 
 .hbody{display:flex;flex-direction:column;gap:26px;padding-top:18px}
 
-.hhead{flex:none;padding:18px var(--home-x) 0;
+.hhead{flex:none;position:relative;padding:18px calc(var(--home-x) + 36px) 0 var(--home-x);
   display:flex;flex-direction:column;gap:6px}
+/* 오른쪽 위 QR 체크인 — 회사 이름 줄과 가운데를 맞춘다. 아이콘 끝이 --home-x 선에 오도록 44px 영역을 10px 바깥으로 (90차) */
+.hhead__qr{position:absolute;top:8px;right:calc(var(--home-x) - 10px)}
 .hhead__r{display:flex;align-items:baseline;gap:5px}   /* 「9월 6일 (일)」 — web 「9/9 (수)」처럼 요일 앞을 띄운다 (66차) */
 .hhead__d{font:700 28px/1.2 var(--font);letter-spacing:-.6px}
 .hhead__w{font:600 16px/1.3 var(--font);color:var(--brand-600)}
 .hhead__s{font:500 14px/1.5 var(--font);color:var(--gray-600)}
+
+/* 전체 공지 한 줄 — 날짜 헤더 아래 · 오늘 예약 위. 면을 깔지 않는 글자 줄 + 위아래 1px 선 (2026-10-06 85차)
+   86차 C안 — 「공지」 읽는 주황(--brand-600) 굵게 · 제목 잉크 · 여럿이면 「1/2」와 함께 3.5초마다 넘김(글자만 opacity로 바뀐다) */
+.hnotice{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 var(--home-x);
+  padding:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left;
+  font:400 14px/1.4 var(--font);color:var(--text);transition:background-color var(--dur-fast) var(--ease)}
+.hnotice:active{background:var(--pressed)}
+.hnotice__k{flex:none;font-weight:800;color:var(--brand-600)}
+.hnotice__t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);
+  transition:opacity 160ms var(--ease)}
+.hnotice__t.is-swap{opacity:0}
+.hnotice__more{flex:none;font-size:12px;color:var(--text-sub)}
+.hnotice .icon{flex:none;color:var(--text-dim)}
+/* 펼친 줄(홈 · 탐색) 안 — 예약하는 날의 그 회의실 공지 한 줄. 같은 모양 · 행 안이라 좌우 여백 없이 · 돌리지 않는다 (2026-10-06 88차) */
+.hnotice--in{width:100%;margin:0}
 
 /* 오늘 예약 — 가로 캐러셀 */
 .tcar{display:flex;flex-direction:column;gap:10px}
@@ -244,6 +258,10 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .srow__n{display:block;font:600 16px/1.4 var(--font)}
 .srow__s{display:block;font:var(--t-sub) var(--font);color:var(--text-sub);margin-top:2px}
 .srow__r{flex:none;text-align:right}
+/* 탐색 줄의 즐겨찾기 별 — 카드처럼 얹지 않고 줄 오른쪽 가운데에 둔다. 줄(.srow)에 기준이 없어
+   별이 모두 화면 오른쪽 위(.viewport)에 겹쳐 있던 것을 고침 (2026-10-07 · 90차 QR 아이콘 자리에서 드러남) */
+.srow__r .favbtn{position:relative;top:auto;right:auto;display:flex;align-items:center;justify-content:center;
+  padding:0;margin-right:-12px}
 .srow__r b{display:block;font:600 13px/1.4 var(--font);color:var(--ok-700)}
 .srow__r b.is-busy{color:var(--text-sub)}
 .srow__r span{display:block;font:400 12px/1.4 var(--font);color:var(--text-sub);margin-top:2px}
@@ -367,6 +385,30 @@ input,textarea{user-select:text;-webkit-user-select:text}
   padding:var(--sp-4) var(--page-x);margin-top:var(--sp-2);
   border-top:1px solid var(--line);font:600 14px/1 var(--font)}
 .lognav .icon{color:var(--text-dim)}
+
+/* 「안내  공지 N · 주의사항 N ›」 — 히어로 맨 아래(연장 · 퇴실 밑) 한 줄 (85차)
+   86차 C안 — 홈 공지 줄과 같은 모양: 「안내」 읽는 주황 굵게 + 개수 · 위아래 1px 선 · 면 없음 */
+.infonav{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin-top:var(--sp-3);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left;
+  font:400 14px/1.4 var(--font);color:var(--text);transition:background-color var(--dur-fast) var(--ease)}
+.infonav:active{background:var(--pressed)}
+.infonav__k{flex:none;font-weight:800;color:var(--brand-600)}
+.infonav__t{flex:1;min-width:0}
+.infonav .icon{flex:none;color:var(--text-dim)}
+
+/* 공지 목록 · 주의사항 목록 — 홈 「공지」 · 제어 「안내」 · 「이 회의실 이용 전에」 시트 (85차)
+   86차 C안 — 카드 테두리 대신 구분선 목록: 제목 16 굵게 · 본문 14 · 게시 기간 12 */
+.nlist{display:flex;flex-direction:column}
+.isec{display:flex;flex-direction:column;gap:var(--sp-1)}
+.isec + .isec{margin-top:var(--sp-4)}
+.ncard{padding:var(--sp-4) 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.nlist .ncard:last-child{border-bottom:0}
+.ncard__t{font:700 16px/1.45 var(--font);overflow-wrap:anywhere}
+.ncard__b{font:400 14px/1.5 var(--font);color:var(--gray-700);white-space:pre-line;overflow-wrap:anywhere}
+.ncard__p{font:var(--t-cap) var(--font);color:var(--text-sub)}
+.clist{display:flex;flex-direction:column}
+.clist li{padding:var(--sp-3) 0;border-bottom:1px solid var(--line);font:var(--t-body) var(--font);overflow-wrap:anywhere}
+.clist li:last-child{border-bottom:0}
 
 
 /* ── 제어 이력 (S-14b) ─────────────────────────────────────── */

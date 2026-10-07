@@ -15,17 +15,27 @@
      ?r=MA13-2&c=482915   현황판 QR — 코드는 실제 시계로 5분마다 바뀐다(지금 · 바로 전 코드만 받는다)
      ?r=PB-A              스티커 QR — 현황판이 없는 방(코드 없음)
      ?t=1605              시연 시각(없으면 14:18) — 시연 도구가 붙인다
-     ?preview=1&r=ID&tab=info   관리자 web A-12 드로어 미리보기 — 인증 없이 G-02 「안내」(tab=ctl이면 「제어」), 저장소에 쓰지 않는다
+     ?preview=1&r=ID&tab=info   관리자 web 미리보기(회의실 상세 · 설정의 「유저 웹」 탭 · 공지 · 84차 · 87차) — 인증 없이 G-02 「안내」(tab=ctl이면 「제어」), 저장소에 쓰지 않는다
                                  postMessage({type:'site-content', data:<siot.mr.site.v1 모양> | null}) · ({type:'site-room', r})
-                                 · ({type:'site-tab', tab:'info'|'ctl'})
+                                 · ({type:'site-tab', tab:'info'|'ctl'}) · ({type:'notice-content', notices:[N] | null} — 공지 원천을 바꾼다 · null = 저장소)
                                  준비되면 parent에 {type:'site-ready', r}
      ?demo=1              시연 도구 바로 열기(빈 곳 0.8초 길게 누르기와 같다)
 
    저장소(같은 origin localhost:8105에서 관리자 web과 공유 — 제품에서는 서버가 갖는다)
-     siot.mr.site.v1         { v:1, rooms:{ 회의실 이름:{ notices:[N], cautions:[C], fn?:{ extend, checkout } } },
-                               common:{ notices:[N], fn?:{ extend, checkout } }, ads:[A] }
+     회의실마다 쓰는 값은 회의실 id(= 문 앞 QR의 r)로 찾는다(88차). 88차 전에 쓴 값은 회의실 이름이 열쇠라 이름(지금 이름 · 처음 이름)도 받는다
+     siot.mr.rooms.v1        { v:1, rooms:[{ id, name, groupId, cap, state:'use'|'fix'|'off', board, order }] } — 회의실 목록 하나(88차 · A-02가 쓴다).
+                             키가 아예 없을 때만 처음 값(REG_SEED). 이름 · 공간 그룹 · 운영 상태(fix 점검 중 · off 사용 안 함) · 문 앞 QR(board 현황판 / 스티커)은 여기서.
+                             아래 ROOMS 더미에 없는 새 회의실(R-001 …)도 연다 — 기기 · 예약 없음(「지금은 예약이 없어요」)
+     siot.mr.groups.v1       { v:1, groups:[{ id, name, parent, order }] } — 공간 그룹 트리(A-08). 그룹 이름 = 「본관 › 13층」 경로
+     siot.mr.notices.v1      { v:1, notices:[N] } — 관리자 web 「공지」(A-13)가 쓴다(87차). 키가 아예 없을 때만 처음 값(NOTICE_SEED)
+                             N = { id, title, body, from, to, target:{ kind:'all'|'groups'|'rooms', groups, rooms:[회의실 id] }, channels:{ app, web } }
+                             게시 중(from ≤ 오늘 ≤ to · 빈 값은 제한 없음) · 제목이나 본문 있음 · channels.web 인 것만
+                             「이 회의실 공지」 = kind ≠ 'all' 이고 rooms에 이 방 id(또는 옛 이름) · 「전체 공지」 = kind 'all'
+     siot.mr.site.v1         { v:1, rooms:{ 회의실 id:{ cautions:[C], fn?:{ extend, checkout } } }, common:{ fn?:{ extend, checkout } } }
+                             주의사항 · 유저 웹 기능만(87차 — 옛 notices · ads는 읽지 않는다 · 광고 배너는 없앴다)
                              키가 아예 없을 때만 처음 값(SITE_SEED) · 있으면 그대로(rooms에 없는 방 = 비움)
-                             fn = 30분 연장 · 퇴실 켬/끔 — 회의실 fn이 있으면 그것(개별), 없으면 common.fn, 그것도 없으면 모두 켬
+                             fn = 30분 연장 · 퇴실 켬/끔 — 항목마다(84차): 회의실 fn에 그 항목 값(true/false)이 있으면 그 값,
+                             없으면 「기본 설정 따르기」 = common.fn(설정 › 유저 웹 탭), 그것도 없으면 켬
      siot.mr.sitesession.v1  { 회의실 ID:{ name, start, end, at, seen?, out? } } — 이 폰의 인증. 종료 시각(연장하면 함께)까지
                              seen = 본 공지 id(안내 탭 점) · out = 퇴실 시각
      siot.mr.sitelock.v1     { 회의실 ID:{ fails, until } } — 5회 연속 실패 → 5분 잠금(until = 실제 시계 ms)
@@ -43,7 +53,8 @@
   var LOCK_FAILS = 5, LOCK_MS = 5 * 60 * 1000;
   var DEMO_N4 = '1111';                   /* 시연용 만능 번호 — 누구의 예약이든 뒤 4자리 대신 받는다. 시간 창 · QR 코드 · 잠금 규칙은 그대로. 제품에는 없다 (83차) */
   var CONFIRM_MS = 1200, FAIL_MS = 3000, DOOR_RELOCK_MS = 3000, AUTO_MS = 1600;
-  var K_SITE = 'siot.mr.site.v1', K_SESS = 'siot.mr.sitesession.v1', K_LOCK = 'siot.mr.sitelock.v1';
+  var K_SITE = 'siot.mr.site.v1', K_NOTI = 'siot.mr.notices.v1', K_SESS = 'siot.mr.sitesession.v1', K_LOCK = 'siot.mr.sitelock.v1';
+  var K_ROOMS = 'siot.mr.rooms.v1', K_GROUPS = 'siot.mr.groups.v1';
   var DEFAULT_ROOM = 'MA13-2';
   /* 「앱으로 열기 · SIOT 앱 받기」 — 프로토타입은 앱 시안으로. 배포판(_build.cjs)은 시연 앱 주소로 바꾼다 · 제품은 유니버설 링크 */
   var APP_URL = '../'; /* @build:app-url */
@@ -70,7 +81,8 @@
     'LT-1801': ['조명', '18층 대강당', 'ok', '꺼짐'], 'AC-1801': ['냉난방', '18층 대강당', 'ok', '대기'], 'BL-1801': ['블라인드', '18층 대강당', 'bad', '오프라인 · 어제부터'], 'DL-1801': ['도어락', '18층 대강당 문', 'ok', '잠김'], 'PJ-1801': ['빔프로젝터', '18층 대강당', 'ok', '꺼짐']
   };
 
-  /* 회의실 — id(QR 주소의 r) · 이름 · 그룹 · 입장 인증(qr · reader · free) · 현황판(있으면 현황판 QR, 없으면 스티커) · 상태(fix 점검 중 · off 사용 안 함)
+  /* 회의실 더미 — id(QR 주소의 r) · 이름 · 그룹 · 입장 인증(qr · reader · free) · 현황판(있으면 현황판 QR, 없으면 스티커) · 상태(fix 점검 중 · off 사용 안 함)
+     이름 · 그룹 · 상태 · 현황판은 회의실 목록(siot.mr.rooms.v1)이 정본이다 — 여기 값은 목록에 그 방이 없을 때만(88차 · byId)
      rsv = 오늘 예약 [시작, 끝, 예약자, 휴대폰 뒤 4자리, 아직 입실 전(인증 방만 의미)] — 예약자 이름은 화면에 보이지 않는다(시연 도구만) */
   var ROOMS = [
     { id: 'MA08-1', name: 'MA08-1 화상회의실', group: '본관 › 8층', floor: '8층', entry: 'reader', signage: true,
@@ -119,22 +131,56 @@
       devs: ['LT-1503', 'AC-1503'], btns: [['입실', ''], ['퇴실', '']], rsv: [] }
   ];
 
-  /* siot.mr.site.v1 처음 값 — 관리자 web A-12와 id까지 같다(키가 아예 없을 때만 쓴다) */
+  /* siot.mr.rooms.v1 처음 값 — 관리자 web A-02 · 현황판 · 앱과 같다(키가 아예 없을 때만 쓴다 · 88차). 위 ROOMS 더미와 이름 · 상태 · 현황판이 같다 */
+  var REG_SEED = [
+    { id: 'MA08-1', name: 'MA08-1 화상회의실', groupId: 'G-11', cap: 6, state: 'use', board: true, order: 0 },
+    { id: 'MA09-1', name: 'MA09-1 화상회의실', groupId: 'G-12', cap: 6, state: 'use', board: true, order: 1 },
+    { id: 'MA10-1', name: 'MA10-1 화상 스튜디오', groupId: 'G-13', cap: 4, state: 'fix', board: true, order: 2 },
+    { id: 'MA11-1', name: 'MA11-1 대회의실', groupId: 'G-14', cap: 8, state: 'use', board: true, order: 3 },
+    { id: 'MA11-2', name: 'MA11-2 소회의실', groupId: 'G-14', cap: 6, state: 'use', board: true, order: 4 },
+    { id: 'PB-A', name: '폰부스 A', groupId: 'G-14', cap: 1, state: 'use', board: false, order: 5 },
+    { id: 'PB-B', name: '폰부스 B', groupId: 'G-14', cap: 1, state: 'use', board: false, order: 6 },
+    { id: 'MA12-2', name: 'MA12-2 (소비자 보호팀 옆)', groupId: 'G-15', cap: 4, state: 'use', board: true, order: 7 },
+    { id: 'WL-12', name: '여성휴게실 12층', groupId: 'G-15', cap: 4, state: 'use', board: false, order: 8 },
+    { id: 'MA13-1', name: 'MA13-1 회의실', groupId: 'G-16', cap: 10, state: 'fix', board: true, order: 9 },
+    { id: 'MA13-2', name: 'MA13-2 회의실', groupId: 'G-16', cap: 8, state: 'use', board: true, order: 10 },
+    { id: 'MA14-1', name: 'MA14-1 세미나실', groupId: 'G-17', cap: 24, state: 'use', board: true, order: 11 },
+    { id: 'MA15-1', name: 'MA15-1 협업실', groupId: 'G-18', cap: 12, state: 'use', board: true, order: 12 },
+    { id: 'MA15-2', name: 'MA15-2 브리핑룸', groupId: 'G-18', cap: 16, state: 'use', board: false, order: 13 },
+    { id: 'WL-15', name: '여성휴게실 15층', groupId: 'G-18', cap: 4, state: 'off', board: false, order: 14 },
+    { id: 'MA18-1', name: 'MA18-1 대강당', groupId: 'G-21', cap: 80, state: 'use', board: true, order: 15 }
+  ];
+  /* siot.mr.groups.v1 처음 값 — 관리자 web 설정(A-08) SEED_GROUPS와 같다 */
+  var GROUP_SEED = [
+    { id: 'G-1', name: '본관', parent: null, order: 0 },
+    { id: 'G-11', name: '8층', parent: 'G-1', order: 0 }, { id: 'G-12', name: '9층', parent: 'G-1', order: 1 },
+    { id: 'G-13', name: '10층', parent: 'G-1', order: 2 }, { id: 'G-14', name: '11층', parent: 'G-1', order: 3 },
+    { id: 'G-15', name: '12층', parent: 'G-1', order: 4 }, { id: 'G-16', name: '13층', parent: 'G-1', order: 5 },
+    { id: 'G-17', name: '14층', parent: 'G-1', order: 6 }, { id: 'G-18', name: '15층', parent: 'G-1', order: 7 },
+    { id: 'G-2', name: '별관', parent: null, order: 1 },
+    { id: 'G-21', name: '18층', parent: 'G-2', order: 0 }
+  ];
+
+  /* siot.mr.site.v1 처음 값 — 주의사항 · 유저 웹 기능만(87차) · 회의실 id가 열쇠(88차) · 관리자 web 회의실 상세와 id까지 같다(키가 아예 없을 때만 쓴다) */
   var SITE_SEED = {
     v: 1,
     rooms: {
-      'MA13-2 회의실': {
-        notices: [{ id: 'N-1302-1', title: 'HDMI 케이블 위치', body: '화상 장비 HDMI 케이블은 책상 서랍에 있어요', from: '2026-09-01', to: '2026-09-30' }],
+      'MA13-2': {
         cautions: [{ id: 'C-1302-1', text: '뚜껑 있는 음료만 들고 와 주세요' }, { id: 'C-1302-2', text: '퇴실할 때 화이트보드를 지워 주세요' }, { id: 'C-1302-3', text: '창문은 열지 마세요(공조)' }]
       },
-      'MA11-1 대회의실': { notices: [], cautions: [{ id: 'C-1101-1', text: '대회의실 마이크는 퇴실할 때 충전대에' }], fn: { extend: false, checkout: true } }
+      'MA11-1': { cautions: [{ id: 'C-1101-1', text: '대회의실 마이크는 퇴실할 때 충전대에' }], fn: { extend: false } }   /* 30분 연장만 사용 안 함 · 퇴실은 기본 설정 따르기 */
     },
-    common: { notices: [{ id: 'N-C-1', title: '9/12(토) 11층 공조 점검', body: '10:00–11:00 냉난방이 멈춰요', from: '2026-09-01', to: '2026-09-12' }], fn: { extend: true, checkout: true } },
-    ads: [
-      { id: 'A-1', title: '사내 카페 가을 신메뉴 · 2층', img: null, link: '', from: '2026-09-01', to: '2026-09-30' },
-      { id: 'A-2', title: '10월 사내 봉사활동 신청', img: null, link: '', from: '2026-09-01', to: '2026-10-31' }
-    ]
+    common: { fn: { extend: true, checkout: true } }
   };
+
+  /* siot.mr.notices.v1 처음 값 — 관리자 web 「공지」(A-13) · 앱과 같다(키가 아예 없을 때만 쓴다 · 87차 · 88차 rooms = 회의실 id) */
+  var NOTICE_SEED = [
+    { id: 'N-1', title: '추석 연휴 회의실 운영', body: '9/24(목)–9/26(토)에는 예약을 받지 않아요', from: '2026-09-01', to: '2026-09-26', target: { kind: 'all', groups: [], rooms: [] }, channels: { app: true, web: true } },
+    { id: 'N-2', title: '10/3(토) 전 층 회의실 소독', body: '09:00–18:00 회의실을 쓸 수 없어요', from: '2026-09-01', to: '2026-10-03', target: { kind: 'all', groups: [], rooms: [] }, channels: { app: true, web: true } },
+    { id: 'N-3', title: '9/12(토) 11층 공조 점검', body: '10:00–11:00 냉난방이 멈춰요', from: '2026-09-01', to: '2026-09-12', target: { kind: 'groups', groups: ['G-14'], rooms: ['PB-A', 'PB-B', 'MA11-1', 'MA11-2'] }, channels: { app: true, web: true } },
+    { id: 'N-4', title: 'HDMI 케이블 위치', body: '화상 장비 HDMI 케이블은 책상 서랍에 있어요', from: '2026-09-01', to: '2026-09-30', target: { kind: 'rooms', groups: [], rooms: ['MA13-2'] }, channels: { app: true, web: true } },
+    { id: 'N-5', title: '방문객 와이파이', body: 'SIOT-Guest · 비밀번호는 안내 데스크에 물어 주세요', from: '', to: '', target: { kind: 'all', groups: [], rooms: [] }, channels: { app: false, web: true } }
+  ];
 
   /* SIOT 자동화가 기기에 하는 일 — 실제로는 SIOT가 실행한다(이름은 A-02 버튼 매핑 · AUTOS 설명과 같게) */
   var AUTOS = {
@@ -181,7 +227,56 @@
     return m && m[1] === DAY ? +m[2] * 60 + +m[3] : null;
   }
   function arr(a) { return Array.isArray(a) ? a.filter(function (x) { return x && typeof x === 'object'; }) : []; }
-  function byId(id) { return ROOMS.filter(function (r) { return r.id === id; })[0] || null; }
+
+  /* 회의실 목록(siot.mr.rooms.v1 · 88차) — 키가 없으면 처음 값 */
+  function regRooms() {
+    var d = load(K_ROOMS);
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return REG_SEED;
+    return arr(d.rooms).filter(function (x) { return typeof x.id === 'string' && x.id; });
+  }
+  /* 공간 그룹 경로 — ['본관', '13층'] (siot.mr.groups.v1 · 비었거나 읽지 못하면 처음 값) */
+  function groupPath(gid) {
+    var d = load(K_GROUPS), gs = d && typeof d === 'object' && !Array.isArray(d) ? arr(d.groups) : [];
+    if (!gs.length) gs = GROUP_SEED;
+    var find = function (id) { return id == null ? null : gs.filter(function (g) { return g.id === id; })[0] || null; };
+    var names = [], seen = {}, g = find(gid);
+    while (g && !seen[g.id]) { seen[g.id] = 1; names.unshift(String(g.name || '')); g = find(g.parent); }
+    return names;
+  }
+  /* 회의실 하나 — 더미(기기 · 버튼 · 오늘 예약 · 입장 인증)에 목록의 이름 · 그룹 · 운영 상태 · 현황판을 얹는다.
+     더미에 없는 새 회의실(A-02 등록 · R-001 …)은 기기 · 예약 없이 연다. 목록에 없으면 더미 그대로(더미에도 없으면 null) */
+  function byId(id) {
+    var base = ROOMS.filter(function (r) { return r.id === id; })[0] || null;
+    var reg = regRooms().filter(function (x) { return x.id === id; })[0] || null;
+    if (!reg) return base;
+    var o = base ? Object.assign({}, base) : { id: id, entry: 'free', devs: [], btns: [['입실', ''], ['퇴실', '']], rsv: [] };
+    var path = groupPath(reg.groupId);
+    o.seedName = base ? base.name : '';
+    o.name = String(reg.name || '').trim() || o.name || id;
+    if (path.length) { o.group = path.join(' › '); o.floor = path[path.length - 1]; }
+    else if (!base) { o.group = ''; o.floor = ''; }
+    o.state = reg.state === 'fix' || reg.state === 'off' ? reg.state : null;
+    o.signage = !!reg.board;
+    return o;
+  }
+  /* 시연 도구의 회의실 칩 — 목록 순서(order) + 목록에 없는 더미 */
+  function roomIds() {
+    var ids = regRooms().slice().sort(function (a, b) { return (+a.order || 0) - (+b.order || 0); }).map(function (x) { return x.id; });
+    ROOMS.forEach(function (r) { if (ids.indexOf(r.id) === -1) ids.push(r.id); });
+    return ids;
+  }
+  /* 저장소에서 이 회의실을 찾는 열쇠 — id가 먼저. 88차 전에 쓴 값은 회의실 이름(지금 이름 · 처음 이름)이 열쇠다 */
+  function roomKeys() {
+    var k = [room.id];
+    [room.name, room.seedName].forEach(function (n) { if (n && k.indexOf(n) === -1) k.push(n); });
+    return k;
+  }
+  function roomEntry(rooms) {
+    if (!room || !rooms || typeof rooms !== 'object') return null;
+    var ks = roomKeys();
+    for (var i = 0; i < ks.length; i++) { var v = rooms[ks[i]]; if (v && typeof v === 'object' && !Array.isArray(v)) return v; }
+    return null;
+  }
   function leftLabel(m) { return m >= 60 ? Math.floor(m / 60) + '시간' + (m % 60 ? ' ' + (m % 60) + '분' : '') : m + '분'; }
   var WEEK = '일월화수목금토';
   function dateLabel(s) {
@@ -213,7 +308,8 @@
     digits: '',
     msg: null,                /* { tone:'bad'|'wait', text } — G-01 칸 아래 한 줄 */
     devFail: false,           /* 시연 도구 「응답 없음」 — 모든 명령이 3초 뒤 실패 */
-    override: null,           /* 미리보기 — 관리자 web이 보낸 저장 전 편집값 */
+    override: null,           /* 미리보기 — 관리자 web이 보낸 저장 전 편집값(siot.mr.site.v1 모양) */
+    notices: null,            /* 미리보기 — 관리자 web 「공지」가 보낸 공지 목록(siot.mr.notices.v1의 notices 대신) */
     focus: !PREVIEW
   };
   /* r 없이 열면 시연 기본 무대(MA13-2 · 지금 현황판 코드) */
@@ -334,7 +430,7 @@
   }
 
 
-  /* ── 안내 콘텐츠 — 관리자 web A-12가 쓴다 ───────────────────── */
+  /* ── 안내 콘텐츠 — 공지는 관리자 web 「공지」(siot.mr.notices.v1) · 주의사항 · 기능은 회의실 상세 · 설정(siot.mr.site.v1) ── */
 
   function siteData() {
     if (S.override) return S.override;
@@ -343,19 +439,36 @@
   }
   /* 30분 연장 · 퇴실 켬/끔 — 회의실 fn(개별)이 있으면 그것, 없으면 common.fn(공통), 그것도 없으면 모두 켬 · 빠진 값도 켬 */
   function fnOf() {
-    var d = siteData(), rm = room && d.rooms && typeof d.rooms === 'object' ? d.rooms[room.name] : null;
-    var f = rm && rm.fn && typeof rm.fn === 'object' ? rm.fn : (d.common && d.common.fn && typeof d.common.fn === 'object' ? d.common.fn : {});
-    return { extend: f.extend !== false, checkout: f.checkout !== false };
+    var d = siteData(), rm = roomEntry(d.rooms);
+    var own = rm && rm.fn && typeof rm.fn === 'object' ? rm.fn : {};
+    var def = d.common && d.common.fn && typeof d.common.fn === 'object' ? d.common.fn : {};
+    /* 항목마다 — 회의실 값이 없으면 기본 설정 따르기(84차 · 정책 탭 예약 단위와 같은 방식) */
+    function pick(k) { return typeof own[k] === 'boolean' ? own[k] : def[k] !== false; }
+    return { extend: pick('extend'), checkout: pick('checkout') };
   }
   function inPeriod(x) { var f = x.from || '', t = x.to || ''; return (!f || f <= DAY) && (!t || DAY <= t); }
   function hasText(n) { return String(n.title || '').trim() || String(n.body || '').trim(); }
+  /* 공지 원천 — 미리보기가 보낸 목록 › 저장소 › 키가 아예 없으면 처음 값 */
+  function noticeList() {
+    if (S.notices) return S.notices;
+    var d = load(K_NOTI);
+    return d && typeof d === 'object' && !Array.isArray(d) ? arr(d.notices) : NOTICE_SEED;
+  }
+  /* 유저 웹에 나가는 게시 중 공지 — kind 'all'이면 전체 공지, 아니면 rooms에 이 방 id(옛 값은 이름)가 있을 때 이 회의실 공지 */
+  function webNotices(all) {
+    var ks = roomKeys();
+    return noticeList().filter(function (n) {
+      var tg = n.target && typeof n.target === 'object' ? n.target : {};
+      if (!(n.channels && n.channels.web === true) || !inPeriod(n) || !hasText(n)) return false;
+      return all ? tg.kind === 'all' : tg.kind !== 'all' && Array.isArray(tg.rooms) && tg.rooms.some(function (k) { return ks.indexOf(k) !== -1; });
+    });
+  }
   function content() {
-    var d = siteData(), rm = (d.rooms && typeof d.rooms === 'object' && d.rooms[room.name]) || {};
+    var d = siteData(), rm = roomEntry(d.rooms) || {};
     return {
-      notices: arr(rm.notices).filter(inPeriod).filter(hasText),
+      notices: webNotices(false),
       cautions: arr(rm.cautions).filter(function (c) { return String(c.text || '').trim(); }),
-      common: arr(d.common && d.common.notices).filter(inPeriod).filter(hasText),
-      ads: arr(d.ads).filter(inPeriod).filter(function (a) { return String(a.title || '').trim() || safeImg(a.img); })
+      common: webNotices(true)
     };
   }
   function noticeIds() { var c = content(); return c.notices.concat(c.common).map(function (n) { return String(n.id); }); }
@@ -371,8 +484,6 @@
     ss.seen = noticeIds();
     sessSet(ss);
   }
-  function safeImg(s) { return typeof s === 'string' && (/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(s) || /^https:\/\//i.test(s)) ? s : ''; }
-  function safeLink(s) { return typeof s === 'string' && /^https?:\/\/[^\s]+$/i.test(s.trim()) ? s.trim() : ''; }
 
 
   /* ============================================================
@@ -418,7 +529,7 @@
     g1Shown = mode;
     var head = '<div class="g1">' + logo() +
       '<h1 class="g1__name">' + esc(room.name) + '</h1>' +
-      '<p class="g1__group">' + esc(room.group) + '</p>' +
+      (room.group ? '<p class="g1__group">' + esc(room.group) + '</p>' : '') +
       '<p class="g1__state"><span class="status status--' + st[1] + '">' + esc(st[0]) + '</span></p>' +
       (mode === 'form' && !cur && next ? '<p class="g1__next tnum">지금은 예약이 없어요 · 다음 예약 ' + hm(next.s) + '</p>' : '') +
     '</div>';
@@ -557,7 +668,7 @@
     var hero = '<div class="hero hero--site">' +
       '<div class="hero__top"><h1 class="hero__name">' + esc(room.name) + '</h1>' +
         '<span class="status status--brand">사용 중 · ' + esc(leftLabel(r.e - S.now)) + ' 남음</span></div>' +
-      '<p class="hero__meta tnum">' + esc(room.floor + ' · ' + hm(r.s) + '–' + hm(r.e)) + '</p>' +
+      '<p class="hero__meta tnum">' + esc((room.floor ? room.floor + ' · ' : '') + hm(r.s) + '–' + hm(r.e)) + '</p>' +
       '<div class="elapsed"><i style="width:' + pct + '%"></i></div>' +
       (btns ? '<div class="btnrow">' + btns + '</div>' : '') +
     '</div>';
@@ -744,7 +855,7 @@
     }, AUTO_MS);
   }
 
-  /* ── G-02 안내 — 이 회의실 공지 → 주의사항 → 전체 공지 → 광고. 빈 묶음은 통째로 숨긴다 ── */
+  /* ── G-02 안내 — 이 회의실 공지 → 주의사항 → 전체 공지. 빈 묶음은 통째로 숨긴다(광고 배너는 87차에 없앴다) ── */
 
   function noticeHtml(n) {
     var p = n.from || n.to ? (dateLabel(n.from) || '') + '–' + (dateLabel(n.to) || '') : '';
@@ -754,27 +865,13 @@
       (p ? '<span class="ncard__p">' + esc(p) + '</span>' : '') +
     '</div>';
   }
-  function adsHtml(ads) {
-    if (!ads.length) return '';
-    return '<div class="ads"><div class="ads__t' + (ads.length > 1 ? ' is-many' : '') + '">' + ads.map(function (a) {
-      var img = safeImg(a.img), link = safeLink(a.link);
-      var cls = 'ad' + (img ? ' has-img' : '');
-      var inner = (img ? '<img src="' + esc(img) + '" alt="">' : '') + '<span class="ad__t">' + esc(a.title) + '</span>';
-      return link
-        ? '<a class="' + cls + '" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>'
-        : '<div class="' + cls + '">' + inner + '</div>';
-    }).join('') + '</div>' +
-      (ads.length > 1 ? '<div class="tdots">' + ads.map(function (a, i) { return '<span' + (i ? '' : ' class="is-on"') + '></span>'; }).join('') + '</div>' : '') +
-    '</div>';
-  }
   function infoHtml() {
     var c = content();
     var parts = [];
-    if (c.notices.length) parts.push('<section class="isec"><h2 class="isec__t">공지</h2>' + c.notices.map(noticeHtml).join('') + '</section>');
+    if (c.notices.length) parts.push('<section class="isec"><h2 class="isec__t">이 회의실 공지</h2>' + c.notices.map(noticeHtml).join('') + '</section>');
     if (c.cautions.length) parts.push('<section class="isec"><h2 class="isec__t">주의사항</h2><ul class="clist">' +
       c.cautions.map(function (x) { return '<li>' + esc(x.text) + '</li>'; }).join('') + '</ul></section>');
     if (c.common.length) parts.push('<section class="isec"><h2 class="isec__t">전체 공지</h2>' + c.common.map(noticeHtml).join('') + '</section>');
-    if (c.ads.length) parts.push(adsHtml(c.ads));
     return '<div class="info"><h1 class="info__name">' + esc(room.name) + '</h1>' +
       (parts.length ? parts.join('') : '<div class="empty">' + icon('alert', 'icon--lg') + '<p class="empty__text">지금은 안내가 없어요</p></div>') +
     '</div>';
@@ -792,7 +889,6 @@
         '<div class="waitrow"><span class="waitrow__k">회의실</span><span class="waitrow__v">' + esc(room.name) + '</span></div>' +
         '<div class="waitrow"><span class="waitrow__k">이용 시간</span><span class="waitrow__v tnum">' + hm(st) + '–' + hm(endAt) + '</span></div>' +
       '</div>' +
-      '<div class="g3__ads">' + adsHtml(content().ads) + '</div>' +
       '<a class="linkbtn g3__app" href="' + esc(APP_URL) + '" data-applink>SIOT 앱 받기</a>' +
     '</div></div>';
   }
@@ -880,7 +976,7 @@
         '<div class="demo__head"><h2 class="demo__title">시연 도구</h2>' +
           '<button type="button" class="iconbtn" data-demo-close aria-label="닫기">' + icon('close') + '</button></div>' +
         '<div class="demo__g"><span class="demo__k">회의실</span><div class="demo__row">' +
-          ROOMS.map(function (r) { return chip(r.id === S.rid, 'data-demo-room="' + r.id + '"', r.id); }).join('') + '</div></div>' +
+          roomIds().map(function (id) { return chip(id === S.rid, 'data-demo-room="' + esc(id) + '"', id); }).join('') + '</div></div>' +
         '<div class="demo__g"><span class="demo__k">QR 종류</span><div class="demo__row">' +
           chip(k === 'live', 'data-demo-qr="live"', '현황판', !sg) +
           chip(k === 'sticker', 'data-demo-qr="sticker"', '스티커', sg) +
@@ -944,11 +1040,18 @@
       var key = b.getAttribute('data-demo-fn'), sd = load(K_SITE);
       if (!sd || typeof sd !== 'object' || Array.isArray(sd)) sd = JSON.parse(JSON.stringify(SITE_SEED));   /* 키가 없으면 처음 값부터 */
       if (!sd.rooms || typeof sd.rooms !== 'object') sd.rooms = {};
-      var rm = sd.rooms[room.name];
-      if (!rm || typeof rm !== 'object') rm = sd.rooms[room.name] = { notices: [], cautions: [] };
-      var fv = fnOf();
-      fv[key] = !fv[key];
-      rm.fn = fv;
+      /* 옛 공지 · 광고 자리는 쓰는 쪽이 지운다(87차 — 공지는 siot.mr.notices.v1 · 광고는 없앴다) */
+      delete sd.ads;
+      if (sd.common && typeof sd.common === 'object') delete sd.common.notices;
+      Object.keys(sd.rooms).forEach(function (nm) { if (sd.rooms[nm] && typeof sd.rooms[nm] === 'object') delete sd.rooms[nm].notices; });
+      /* 회의실 id로 쓰고 옛 이름 열쇠는 지운다(88차 — 이름으로만 있던 값은 id로 옮긴다) */
+      var rm = roomEntry(sd.rooms);
+      roomKeys().slice(1).forEach(function (k) { delete sd.rooms[k]; });
+      if (!rm) rm = { cautions: [] };
+      sd.rooms[room.id] = rm;
+      var cur = fnOf()[key];
+      if (!rm.fn || typeof rm.fn !== 'object') rm.fn = {};
+      rm.fn[key] = !cur;   /* 누른 항목만 그 방 값으로 · 다른 항목은 기본 설정 따르기 그대로 */
       save(K_SITE, sd); render(); return true;
     }
     if ((b = t.closest('[data-demo-num]'))) {
@@ -969,7 +1072,7 @@
   (function wireLongPress() {
     if (PREVIEW) return;
     var timer = null, armed = false, fired = false, sx = 0, sy = 0;
-    var BUSY = 'button,a,input,label,select,textarea,.dcard,.sheetlayer,.demo,.toast,.codebox,.ads';
+    var BUSY = 'button,a,input,label,select,textarea,.dcard,.sheetlayer,.demo,.toast,.codebox';
     function disarm() { clearTimeout(timer); armed = false; }
     document.addEventListener('pointerdown', function (e) {
       fired = false;
@@ -995,7 +1098,7 @@
     if (t.closest('[data-close]')) { closeSheet(); return; }
     if (t.closest('.demo') && demoClick(t)) return;
 
-    if (PREVIEW) {   /* 미리보기는 보기만 — 앱 링크 · 탭은 움직이지 않는다(광고 링크는 새 창 그대로) */
+    if (PREVIEW) {   /* 미리보기는 보기만 — 앱 링크 · 탭은 움직이지 않는다 */
       if (t.closest('[data-applink]')) e.preventDefault();
       return;
     }
@@ -1103,26 +1206,25 @@
     }
   });
 
-  /* 광고 넘김 점 */
-  document.addEventListener('scroll', function (e) {
-    var tr = e.target;
-    if (!tr.classList || !tr.classList.contains('ads__t')) return;
-    var items = tr.children, i = Math.round(tr.scrollLeft / Math.max(1, items[0].offsetWidth + 10));
-    $$('span', tr.parentNode.querySelector('.tdots') || document.createElement('i')).forEach(function (s, j) { s.classList.toggle('is-on', j === i); });
-  }, true);
-
-  /* 관리자 web이 저장하면(같은 origin의 다른 탭) 그 자리에서 */
+  /* 관리자 web이 저장하면(같은 origin의 다른 탭) 그 자리에서 — 공지 · 주의사항과 기능 · 세션 · 잠금 · 회의실 이름 · 그룹 · 운영 상태(88차) */
   window.addEventListener('storage', function (e) {
-    if (e.key !== null && [K_SITE, K_SESS, K_LOCK].indexOf(e.key) === -1) return;
+    if (e.key !== null && [K_SITE, K_NOTI, K_SESS, K_LOCK, K_ROOMS, K_GROUPS].indexOf(e.key) === -1) return;
     if (e.key === K_SESS && room) setRoom(S.rid);
+    else if (e.key === null || e.key === K_ROOMS || e.key === K_GROUPS) {
+      /* 이름 · 그룹 · 상태만 바꾼다(이 폰의 예약 · 기기 값은 그대로). 없던 방이 생기거나 있던 방이 없어지면 처음부터 */
+      var nr = byId(S.rid);
+      if (nr && room) { room = nr; document.title = room.name + ' · SIOT'; }
+      else setRoom(S.rid);
+    }
     render();
   });
 
-  /* 미리보기 — 관리자 web 드로어의 저장 전 편집값 · 방 · 탭(드로어 위 「안내 | 제어」) */
+  /* 미리보기 — 관리자 web 드로어의 저장 전 편집값 · 공지 목록 · 방 · 탭(드로어 위 「안내 | 제어」) */
   window.addEventListener('message', function (e) {
     if (!PREVIEW || e.origin !== location.origin) return;
     var d = e.data || {};
     if (d.type === 'site-content') { S.override = d.data && typeof d.data === 'object' && !Array.isArray(d.data) ? d.data : null; render(); }
+    else if (d.type === 'notice-content') { S.notices = Array.isArray(d.notices) ? arr(d.notices) : null; render(); }
     else if (d.type === 'site-room' && typeof d.r === 'string') { setRoom(d.r); render(); }
     else if (d.type === 'site-tab') { S.tab = d.tab === 'ctl' ? 'ctl' : 'info'; render(); }
   });

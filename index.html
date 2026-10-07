@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="assets/tokens.css?v=3f78436d">
 <link rel="stylesheet" href="assets/components.css?v=b695712f">
-<link rel="stylesheet" href="assets/app.css?v=616a19ef">
+<link rel="stylesheet" href="assets/app.css?v=e47cc515">
 <link rel="stylesheet" href="assets/mobile.css?v=1b2e2fbe">
 </head>
 <body>
@@ -89,6 +89,7 @@
         <span class="appbar__title">탐색<span id="findDate"></span></span>
         <span class="appbar__trail">
           <button class="iconbtn" data-go="S-24" aria-label="검색"><svg class="icon"><use href="#i-search"/></svg></button>
+          <button class="iconbtn iconbtn--qr" data-go="S-12" data-qrbtn aria-label="QR 체크인"><svg class="icon"><use href="#i-qr"/></svg></button>
         </span>
       </header>
       <div class="screen__body" id="findBody"></div>
@@ -100,6 +101,7 @@
         <span class="appbar__title">내 예약<span id="mineCount"></span></span>
         <span class="appbar__trail">
           <button class="iconbtn" data-go="S-21" aria-label="알림"><svg class="icon"><use href="#i-bell"/></svg></button>
+          <button class="iconbtn iconbtn--qr" data-go="S-12" data-qrbtn aria-label="QR 체크인"><svg class="icon"><use href="#i-qr"/></svg></button>
         </span>
       </header>
       <div class="segment pad" id="mineSeg"></div>
@@ -166,6 +168,9 @@
     <section class="screen" data-screen="S-18" aria-label="마이">
       <header class="appbar">
         <span class="appbar__title">마이</span>
+        <span class="appbar__trail">
+          <button class="iconbtn iconbtn--qr" data-go="S-12" data-qrbtn aria-label="QR 체크인"><svg class="icon"><use href="#i-qr"/></svg></button>
+        </span>
       </header>
       <div class="screen__body" id="myBody"></div>
     </section>
@@ -248,12 +253,10 @@
   <!-- 스펙 오버레이 (§18) — 개발자 리뷰용. 기본 꺼짐 -->
   <div class="specovl" id="specOvl" hidden></div>
 
-  <!-- 하단 탭 4개 -->
+  <!-- 하단 탭 4개. QR 체크인은 탭바 가운데 검정 버튼(26차)에서 각 탭 오른쪽 위 QR 아이콘으로 옮겼다(카카오톡형 · 2026-10-07 90차) -->
   <nav class="tabbar" id="tabbar" aria-label="주요 화면">
     <button class="tabbar__item" data-tab="S-05"><svg class="icon"><use href="#i-home"/></svg><span class="tabbar__label">홈</span></button>
     <button class="tabbar__item" data-tab="S-06"><svg class="icon"><use href="#i-search"/></svg><span class="tabbar__label">탐색</span></button>
-    <!-- 가운데 체크인 — 탭이 아니라 동작 버튼(A안 · 2026-09-22). 활성 상태가 없고 검정이라 주황 CTA와 부딪히지 않는다 -->
-    <button class="tabbar__scan" data-go="S-12" aria-label="QR 체크인"><span class="tabbar__ball"><svg class="icon"><use href="#i-qr"/></svg></span><span class="tabbar__label">체크인</span></button>
     <button class="tabbar__item" data-tab="S-16"><svg class="icon"><use href="#i-cal"/></svg><span class="tabbar__label">내 예약</span></button>
     <button class="tabbar__item" data-tab="S-18"><svg class="icon"><use href="#i-user"/></svg><span class="tabbar__label">마이</span></button>
   </nav>
@@ -363,9 +366,9 @@
 </aside>
 
 <script src="assets/storage-migrate.js?v=3f4030e6"></script>
-<script src="assets/mock.js?v=43d94d21"></script>
-<script src="assets/accounts.js?v=398faadf"></script>
-<script src="assets/app.js?v=206d07f0"></script>
+<script src="assets/mock.js?v=47103eb9"></script>
+<script src="assets/accounts.js?v=8dbc4028"></script>
+<script src="assets/app.js?v=5986d341"></script>
 <script src="assets/demo.js?v=95a76319"></script>
 </body>
 </html>

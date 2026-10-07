@@ -40,8 +40,11 @@
     return '<svg class="icon' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
   }
 
+  /* 관리자 web 「공지」 폰 미리보기 — ?still=1&noticepreview=1 (87차). 같은 origin의 postMessage({ type:'notice-preview', notices })를
+     받으면 저장소 대신 그 공지 목록으로 홈 줄 · 제어 「안내」를 다시 그린다. 늘 still로 돈다(세션 · 저장소에 쓰지 않음 · 시트 자동으로 안 엶) */
+  var NOTICE_PREVIEW = /[?&]noticepreview=1/.test(location.search);
   /* index.html 미리보기(iframe)는 ?still=1 로 연다 — 자동 전환·카운트다운 정지 */
-  var STILL = /[?&]still=1/.test(location.search);
+  var STILL = NOTICE_PREVIEW || /[?&]still=1/.test(location.search);
   /* ?home=live|soon|none 으로 홈 상태를 지정해 열 수 있다 (미리보기용) */
   var PRESET_HOME = (location.search.match(/[?&]home=(live|soon|none)/) || [])[1] || null;
   /* 스마트폰 시연판(mobile/ · _mobile.cjs)은 window.SIOT_DEMO = true — 처음 여는 폰은 데모 계정으로
@@ -121,10 +124,13 @@
     }
     /* QR 유효시간은 제어 페이지를 떠나면 멈춘다 */
     if (id !== 'S-14') clearInterval(qrTimer);
+    /* 사용 중으로 처음 열리면 「이 회의실 이용 전에」(예약마다 한 번 · 85차). QR 체크인의 토스트는 시트를 닫은 뒤에 */
+    if (id === 'S-14') { var af = cautionAfter; cautionAfter = null; if (!openCautions(af) && af) af(); }
 
     /* 탭바는 탭 화면에서만. 밀려 올라온 화면은 고정 CTA가 하단을 쓴다 */
     $('#tabbar').hidden = TABS.indexOf(id) === -1;
-    var sc = $('#tabbar .tabbar__scan'); if (sc) sc.hidden = !hasCo() || !F.anyQrSpace();   /* 업장에 QR 방이 없으면 버튼도 없다 · 회사가 없어도 (72차) */
+    var noQr = !qrBtnShown();
+    $$('[data-qrbtn]').forEach(function (b) { b.hidden = noQr; });   /* 업장에 QR 방이 없으면 오른쪽 위 QR 아이콘도 없다 · 회사가 없어도 (72차 · 90차) */
     $$('.tabbar__item').forEach(function (b) {
       b.classList.toggle('is-active', b.getAttribute('data-tab') === id);
     });
@@ -703,6 +709,7 @@
     }
 
     return '<span class="srow__x">' +
+      bookNoticeHtml(sp.id, M.NOW) +   /* 오늘 이 회의실 공지 — 시간 칩 위 한 줄 (88차) */
       '<span class="chiprow">' + chips + '</span>' +
       '<span class="sheetrow">참석 인원' +   /* web 예약 상세 · 등록과 같은 이름 (66차) */
         '<span class="stepper">' +
@@ -723,11 +730,109 @@
   function homeHeadHtml() {
     var d = M.NOW, DOW = ['일', '월', '화', '수', '목', '금', '토'];
     return '<div class="hhead">' + coSwHtml() +
+        /* 오른쪽 위 QR 체크인 아이콘 — 탐색 · 내 예약 · 마이 앱바와 같은 자리 (카카오톡형 · 2026-10-07 90차) */
+        '<button class="iconbtn iconbtn--qr hhead__qr" data-go="S-12" data-qrbtn aria-label="QR 체크인"' + (qrBtnShown() ? '' : ' hidden') + '>' + icon('qr') + '</button>' +
         '<p class="hhead__r"><span class="hhead__d">' +
           (d.getMonth() + 1) + '월 ' + d.getDate() + '일</span>' +
           '<span class="hhead__w">(' + DOW[d.getDay()] + ')</span></p>' +
         (hasCo() ? '<p class="hhead__s">' + esc(M.branding.siteName) + '</p>' : '') +   /* 부서는 마이에 있다 (2026-09-23) */
       '</div>';
+  }
+
+  /* ── 공지 · 주의사항 (2026-10-06 85차) — 관리자가 쓴 것을 앱 이용자도 본다. 데이터 규약은 mock.js 08i ── */
+
+  /** 'YYYY-MM-DD' → 좁은 자리 날짜 「9/12 (토)」. 모양이 다르면 빈칸 */
+  function ymdShort(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+    return m ? dayShort(new Date(+m[1], +m[2] - 1, +m[3])) : '';
+  }
+  /** 공지 카드 — 제목 · 본문 · 게시 기간 「9/1 (화)–9/12 (토)」 */
+  function noticeCardHtml(n) {
+    var t = String(n.title || '').trim(), b = String(n.body || '').trim();
+    var p = n.from || n.to ? ymdShort(n.from) + '–' + ymdShort(n.to) : '';
+    return '<div class="ncard">' +
+      (t ? '<b class="ncard__t">' + esc(t) + '</b>' : '') +
+      (b ? '<p class="ncard__b">' + esc(b) + '</p>' : '') +
+      (p ? '<span class="ncard__p tnum">' + esc(p) + '</span>' : '') +
+    '</div>';
+  }
+  function cautionListHtml(cs) {
+    return '<ul class="clist">' + cs.map(function (c) { return '<li>' + esc(c.text) + '</li>'; }).join('') + '</ul>';
+  }
+
+  /** 홈 맨 위 한 줄 — 전체 공지(게시 중)만. 면을 깔지 않는 글자 줄 + 위아래 1px 선. 없으면 줄도 없다.
+      86차 C안 — 「공지」 주황 글자 + 제목 · 여럿이면 3.5초마다 다음 공지로(「1/2」). 움직임 줄이기 · 미리보기(still)면 멈추고 「외 N」 */
+  var NOTICE_ROLL_MS = 3500;
+  var noticeRoll = { timer: null, i: 0 };
+  function rollsNotices(n) {
+    return n > 1 && !STILL && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function noticeTitle(n) { return String(n.title || '').trim() || String(n.body || '').trim().split('\n')[0]; }
+  function homeNoticeHtml() {
+    var ns = F.commonNotices();
+    if (!ns.length) return '';
+    var roll = rollsNotices(ns.length);
+    if (noticeRoll.i >= ns.length) noticeRoll.i = 0;
+    var i = roll ? noticeRoll.i : 0;
+    return '<button class="hnotice" data-hnotice>' +
+      '<b class="hnotice__k">공지</b>' +
+      '<span class="hnotice__t" data-hnotice-t>' + esc(noticeTitle(ns[i])) + '</span>' +
+      (ns.length > 1 ? '<span class="hnotice__more tnum" data-hnotice-n>' + (roll ? (i + 1) + '/' + ns.length : '외 ' + (ns.length - 1)) + '</span>' : '') +
+      icon('next', 'icon--sm') +
+    '</button>';
+  }
+  /** 홈을 그린 뒤 — 제목 · 번호만 갈아 끼운다(홈을 다시 그리지 않는다). 홈이 가려져 있으면 넘기지 않는다 */
+  function startNoticeRoll() {
+    clearInterval(noticeRoll.timer);
+    noticeRoll.timer = null;
+    if (!rollsNotices(F.commonNotices().length)) return;
+    noticeRoll.timer = setInterval(function () {
+      var t = $('[data-hnotice-t]'), n = $('[data-hnotice-n]'), ns = F.commonNotices();
+      if (!t || ns.length < 2) { clearInterval(noticeRoll.timer); noticeRoll.timer = null; return; }
+      if (!t.offsetParent) return;
+      noticeRoll.i = (noticeRoll.i + 1) % ns.length;
+      t.classList.add('is-swap');
+      setTimeout(function () {
+        t.textContent = noticeTitle(ns[noticeRoll.i]);
+        if (n) n.textContent = (noticeRoll.i + 1) + '/' + ns.length;
+        t.classList.remove('is-swap');
+      }, 160);
+    }, NOTICE_ROLL_MS);
+  }
+
+  /* 열린 안내 시트 — 관리자 web이 다른 탭에서 공지를 고치면 그 자리에서 다시 그린다 ('home' | 'ctl' | null) */
+  var infoSheet = null;
+
+  function homeNoticesBody() { return '<div class="nlist">' + F.commonNotices().map(noticeCardHtml).join('') + '</div>'; }
+  function homeNoticesTitle() { var nN = F.commonNotices().length; return '공지' + (nN > 1 ? ' ' + nN : ''); }
+  /** 홈 「공지」 시트 — 게시 중인 전체 공지 카드. 하단 버튼 없음 · 닫기는 X */
+  function openNoticesSheet() {
+    if (!F.commonNotices().length) return;
+    infoSheet = 'home';
+    openSheet({ title: homeNoticesTitle(), body: homeNoticesBody(), onClose: function () { infoSheet = null; } });
+  }
+
+  /** 펼친 줄(홈 · 탐색)의 회의실 공지 한 줄 — 예약하는 날에 게시 중인 그 회의실 공지 (88차 사용자 결정 ③).
+      홈 줄과 같은 C안 모양(「공지」 + 첫 제목 + 「외 N」 + › · 면 없음) · 돌리지 않는다. 없으면 줄도 없다 */
+  var bookSheetAt = null;   /* 열린 「공지」 시트의 { id, day } — 공지가 바뀌면 그 자리에서 다시 그린다 */
+  function bookNoticeHtml(spaceId, day) {
+    var ns = F.bookNotes(spaceId, day);
+    if (!ns.length) return '';
+    return '<button class="hnotice hnotice--in" data-bnotice="' + esc(spaceId) + '" data-bday="' + esc(F.ymd(day)) + '">' +
+      '<b class="hnotice__k">공지</b>' +
+      '<span class="hnotice__t">' + esc(noticeTitle(ns[0])) + '</span>' +
+      (ns.length > 1 ? '<span class="hnotice__more tnum">외 ' + (ns.length - 1) + '</span>' : '') +
+      icon('next', 'icon--sm') +
+    '</button>';
+  }
+  function bookNoticesTitle(ns) { return '공지' + (ns.length > 1 ? ' ' + ns.length : ''); }
+  function bookNoticesBody(ns) { return '<div class="nlist">' + ns.map(noticeCardHtml).join('') + '</div>'; }
+  /** 「공지」 시트 — 그 회의실 · 그 날짜의 공지 목록. 하단 버튼 없음 · 닫기는 X */
+  function openBookNotices(spaceId, day) {
+    var ns = F.bookNotes(spaceId, day);
+    if (!ns.length) return;
+    infoSheet = 'book'; bookSheetAt = { id: spaceId, day: day };
+    openSheet({ title: bookNoticesTitle(ns), body: bookNoticesBody(ns), onClose: function () { infoSheet = null; bookSheetAt = null; } });
   }
 
   function renderHome() {
@@ -786,6 +891,7 @@
 
     $('#homeBody').innerHTML =
       '<div class="hbody">' +
+        homeNoticeHtml() +   /* 날짜 헤더 아래 · 오늘 예약 위 — 전체 공지 한 줄 (85차) */
         todayCarHtml() + favSec + recSec +
         '<section class="hsec hsec--list">' +
           '<div class="hsec__h" style="padding:0">' +
@@ -795,6 +901,7 @@
           '<div class="slist">' + rows + '</div>' +
         '</section>' +
       '</div>';
+    startNoticeRoll();   /* 공지가 둘 이상이면 3.5초마다 다음 공지 (86차 C안) */
 
     /* 시안에는 하단 고정 CTA가 없다 — 주 동작은 카드의 「체크인」이다 */
     $('#homeCta').innerHTML = '';
@@ -926,6 +1033,7 @@
   function findPanelHtml(s) {
     var cap = s.policy.capacity || 0;
     return '<span class="srow__x">' +
+      bookNoticeHtml(s.id, q.date) +   /* 고른 날짜의 이 회의실 공지 — 인원 위 한 줄 (88차) */
       '<span class="sheetrow">참석 인원' +
         '<span class="stepper">' +
           '<button class="stepper__btn' + (findOpen.people <= 1 ? ' is-disabled' : '') +
@@ -1436,6 +1544,7 @@
             '<button class="btn btn--sm btn--danger" data-exit="' + esc(r.id) + '">퇴실하기</button>' +
           '</div>'
         : '') +
+      ctlInfoHtml(sp.id) +   /* 「공지 N · 주의사항 N ›」 — 누르면 안내 시트 (85차) */
     '</div>';
 
     var body;
@@ -1457,6 +1566,59 @@
 
     /* QR 카운트다운은 화면이 살아 있는 동안만 */
     if (!live && F.canIssueCheckinCode(r) && qrLeft > 0 && !STILL) qrTick('#qrLeft');
+  }
+
+  /* ── 제어 페이지의 공지 · 주의사항 (2026-10-06 85차) ──────────
+     공지 = 이 회의실 공지 + 전체 공지(게시 중) · 주의사항 = 이 회의실 주의사항. 0이면 그 말을 빼고, 둘 다 0이면 줄이 없다 */
+  function ctlInfoHtml(spaceId) {
+    var rn = F.roomNotes(spaceId), nN = rn.notices.length + F.commonNotices().length, cN = rn.cautions.length;
+    var parts = [];
+    if (nN) parts.push('공지 ' + nN);
+    if (cN) parts.push('주의사항 ' + cN);
+    if (!parts.length) return '';
+    /* 86차 C안 — 홈 공지 줄과 같은 모양: 「안내」 주황 글자 + 개수 + › · 위아래 1px 선 */
+    return '<button class="infonav" data-ctlinfo><b class="infonav__k">안내</b><span class="infonav__t tnum">' + parts.join(' · ') + '</span>' + icon('next', 'icon--sm') + '</button>';
+  }
+
+  /** 「안내」 시트 본문 — 이 회의실 공지 → 주의사항 → 전체 공지 (유저 웹 「안내」 탭과 같은 순서 · 광고 없음). 빈 묶음은 뺀다 */
+  function ctlInfoBody(spaceId) {
+    var rn = F.roomNotes(spaceId), cn = F.commonNotices(), parts = [];
+    function sec(t, inner) { return '<section class="isec"><p class="groupt" style="padding:0">' + t + '</p>' + inner + '</section>'; }
+    if (rn.notices.length) parts.push(sec('이 회의실 공지', '<div class="nlist">' + rn.notices.map(noticeCardHtml).join('') + '</div>'));
+    if (rn.cautions.length) parts.push(sec('주의사항', cautionListHtml(rn.cautions)));
+    if (cn.length) parts.push(sec('전체 공지', '<div class="nlist">' + cn.map(noticeCardHtml).join('') + '</div>'));
+    return parts.join('');
+  }
+  function openCtlInfo() {
+    if (!ctlTarget) return;
+    infoSheet = 'ctl';
+    openSheet({ title: '안내', body: ctlInfoBody(ctlTarget.spaceId), onClose: function () { infoSheet = null; } });
+  }
+
+  /* 「이 회의실 이용 전에」 — 사용 중인 예약으로 제어 페이지가 처음 열릴 때 한 번(QR 체크인 · 리더기 · 자동 입실 모두).
+     본 예약은 이 폰에 남긴다 { 예약 id: true }. 입실 전 · 미리보기(?still=1 — 인덱스 썸네일)에는 열지 않는다 */
+  var CAUTION_KEY = 'siot.mr.cautionseen.v1';
+  var cautionAfter = null;   /* QR 체크인 토스트는 시트를 닫은 뒤에 — 토스트가 「확인했어요」를 가리지 않게 (유저 웹과 같은 순서) */
+  function cautionSeen() {
+    try { var o = JSON.parse(localStorage.getItem(CAUTION_KEY) || 'null'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; }
+    catch (e) { return {}; }
+  }
+  function forgetCaution(id) {
+    var o = cautionSeen();
+    if (!o[id]) return;
+    delete o[id];
+    try { localStorage.setItem(CAUTION_KEY, JSON.stringify(o)); } catch (e) {}
+  }
+  /** 열었으면 true — after는 시트를 닫은 뒤에 */
+  function openCautions(after) {
+    var r = ctlTarget;
+    if (STILL || !r || r.status !== 'CHECKED_IN' || isSheetOpen()) return false;
+    var cs = F.roomNotes(r.spaceId).cautions, seen = cautionSeen();
+    if (!cs.length || seen[r.id]) return false;
+    seen[r.id] = true;   /* 열 때 남긴다 — X로 닫아도 본 것 */
+    try { localStorage.setItem(CAUTION_KEY, JSON.stringify(seen)); } catch (e) {}
+    openSheet({ title: '이 회의실 이용 전에', body: cautionListHtml(cs), cta: { label: '확인했어요' }, onClose: after || null });
+    return true;
   }
 
   var sceneRunning = null, sceneDone = null;
@@ -1693,10 +1855,10 @@
       ctlTarget = r; readerMsg = '';
       closeRow(); renderHome(); renderMine();
       /* 스캐너 자리를 제어 페이지로 바꾼다 — 뒤로 가면 스캐너가 아니라 원래 화면 */
-      var base = stack.slice(0, -1);
+      var base = stack.slice(0, -1), okMsg = other ? A.company(other.code).name + ' 회의실이에요 · 입실했어요' : '입실했어요 · 문이 열렸어요';
+      cautionAfter = function () { toast(okMsg); };   /* 주의사항 시트가 열리면 닫은 뒤에, 아니면 바로 (85차) */
       apply(base.concat(['S-14']), 'push');
       history.replaceState({ stack: stack.slice() }, '', '#S-14');
-      toast(other ? A.company(other.code).name + ' 회의실이에요 · 입실했어요' : '입실했어요 · 문이 열렸어요');
     }, 900);
   }
 
@@ -1746,7 +1908,7 @@
     if (r.status === 'CHECKED_IN') return { label: '기기 제어', act: 'ctl' };
     if (r.status === 'APPROVED' && F.canIssueCheckinCode(r)) return { label: '체크인', act: 'scan' };
     /* 예정 예약의 하단 버튼은 「예약 취소하기」 — 더보기에 숨기지 않는다 (2026-09-23 저녁)
-       체크인은 탭바 가운데 버튼과 오늘 예약 카드가 갖는다 */
+       체크인은 탭 화면 오른쪽 위 QR 아이콘(90차)과 오늘 예약 카드가 갖는다 */
     if (r.status === 'APPROVED') return { label: '예약 취소하기', act: 'cancel', kind: 'danger' };
     return { label: '같은 회의실 다시 예약', act: 'again' };
   }
@@ -1988,6 +2150,8 @@
   }
   function curMember() { return coCode ? activeOf(coCode) : null; }
   function hasCo() { return !!curMember(); }
+  /** 오른쪽 위 QR 체크인 아이콘을 보일지 — 고른 회사가 있고 그 업장에 QR 체크인 방이 있을 때만 (72차 · 90차) */
+  function qrBtnShown() { return hasCo() && F.anyQrSpace(); }
   function snapMembers() { var o = {}; myMembers().forEach(function (m) { o[m.id] = m.status; }); return o; }
 
   /** 「나」를 로그인한 계정 + 고른 회사의 소속으로 채운다 — 부서는 경로, 직급 서열은 그 회사 것 */
@@ -2639,10 +2803,13 @@
              '홈 3a — 날짜 헤더 · 오늘 예약 캐러셀 · 즐겨찾기 · 최근 사용 · 전체 회의실(사용 중은 맨 뒤)',
              '행을 누르면 그 자리에서 펼쳐져 시간·인원만 정하고 확정한다',
              '예약 사유는 받지 않는다 · 주 동작은 캐러셀 카드의 「체크인」(입실 시각 전에는 흐림)',
-             '카드를 누르면 내 예약과 같은 규칙 — 사용 중·입실 시각이면 제어, 아니면 예약 상세 (65차)'],
+             '카드를 누르면 내 예약과 같은 규칙 — 사용 중·입실 시각이면 제어, 아니면 예약 상세 (65차)',
+             '날짜 헤더 아래 「공지」 한 줄 — 게시 중인 전체 공지(관리자 web 설정 › 공지)의 첫 제목 + 「외 N」. 누르면 공지 시트. 없으면 줄도 없다 (85차)',
+             '펼친 줄 맨 위 「공지」 한 줄 — 오늘 게시 중인 그 회의실 공지(그룹 · 회의실 공지 · 전체 공지는 빼고). 누르면 공지 시트 · 없으면 줄도 없다 (88차)'],
     'S-06': ['탐색 — 조건은 날짜 · 시작 · 종료 3버튼 + 공간 그룹 칩 · 「4명 이상」(홈과 같음). 날짜는 월 달력 시트, 「며칠 뒤까지 예약」까지만',
              '시작·종료를 누르면 시각 시트 — 30분 단위 방이 있으면 30분 간격. 1시간 단위 방은 정시가 아닌 시간에 결과에서 빠진다 (57차)',
-             '결과는 홈과 같은 줄. 줄을 누르면 그 자리에서 인원을 고르고 예약'],
+             '결과는 홈과 같은 줄. 줄을 누르면 그 자리에서 인원을 고르고 예약',
+             '펼친 줄 맨 위 「공지」 한 줄 — 고른 날짜에 게시 중인 그 회의실 공지. 한빛홀은 9/8까지 (88차)'],
     'S-16': ['내 예약 — 날짜별 카드 목록. 이용 시간에 카드를 누르면 제어 페이지 · 고른 회사의 예약만 (72차)',
              '예정 / 지난 세그먼트'],
     'S-14': ['카드에서 여는 전용 페이지. 이용 중과 입실 전을 한 화면이 다룬다',
@@ -2651,9 +2818,10 @@
              '자동화 버튼은 기기 섹션 안 알약 버튼 · 상단은 이름+상태 / 정보+시간 / 진행 바 / 연장·퇴실로 낮게 (69차)',
              '낙관적 UI 금지 — 전송 중/확정/실패 3상태. 도어는 지문 확인 1회',
              '입실 전에는 「체크인」 — 문 앞 예약 현황판의 QR을 앱이 읽는다(S-12). 입실 시각 전에는 흐린 버튼',
-             '이용 중 — 진행 바 아래 「30분 연장 · 퇴실하기」. 뒤 30분에 예약이 있으면 연장이 흐려지고 누르면 이유를 말한다 (57차)'],
-    'S-12': ['QR 체크인 — 탭바 가운데 검정 버튼(A안) · 오늘 카드 「체크인」 · 예약 상세에서 열린다',
-             '입장 인증은 회의실 속성 — QR / 리더기(안면인식 등 · 현장 장비가 기록) / 인증 없음(시작 시각에 자동). 업장에 QR 방이 없으면 탭바 버튼도 없다',
+             '이용 중 — 진행 바 아래 「30분 연장 · 퇴실하기」. 뒤 30분에 예약이 있으면 연장이 흐려지고 누르면 이유를 말한다 (57차)',
+             '그 아래 「공지 N · 주의사항 N ›」 — 안내 시트(이 회의실 공지 → 주의사항 → 전체 공지). 사용 중으로 처음 열면 「이 회의실 이용 전에」 시트가 예약마다 한 번 (85차)'],
+    'S-12': ['QR 체크인 — 홈 · 탐색 · 내 예약 · 마이 오른쪽 위 QR 아이콘(카카오톡형 · 90차 — 26차 탭바 가운데 검정 버튼을 대신함) · 오늘 카드 「체크인」 · 예약 상세에서 열린다',
+             '입장 인증은 회의실 속성 — QR / 리더기(안면인식 등 · 현장 장비가 기록) / 인증 없음(시작 시각에 자동). 업장에 QR 방이 없으면 QR 아이콘도 없다',
              '카메라 + 주황 프레임, 아래 시트에 6자리 코드 입력(대체 경로). 성공하면 제어 페이지로 바뀐다',
              '프로토타입: 카메라를 누르면 읽힌 것으로. 결과는 툴바 리더기 모드(success/fail/early)'],
     'S-14b': ['누가 언제 무엇을 조작했는지. 자동 실행은 조작자 자리에 "자동"'],
@@ -2798,6 +2966,9 @@
     if (tb0) { goTab(tb0.getAttribute('data-tab')); return; }
 
     /* ── 홈 (S-05) ── */
+    if (t.closest('[data-hnotice]')) { openNoticesSheet(); return; }   /* 맨 위 「공지」 한 줄 (85차) */
+    var bn = t.closest('[data-bnotice]');   /* 펼친 줄(홈 · 탐색)의 회의실 공지 한 줄 (88차) */
+    if (bn) { openBookNotices(bn.getAttribute('data-bnotice'), bn.getAttribute('data-bday')); return; }
     var hf = t.closest('[data-hfloor]');
     if (hf) { homePath = nextPath(homePath, hf.getAttribute('data-hfloor')); closeRow(); renderHome(); return; }
 
@@ -2995,6 +3166,7 @@
       return;
     }
     if (t.closest('[data-remote]')) { openRemote(); return; }   /* 냉난방 「리모컨 제어」 창 (69차) */
+    if (t.closest('[data-ctlinfo]')) { openCtlInfo(); return; }   /* 「공지 N · 주의사항 N」 → 안내 시트 (85차) */
     var sc = t.closest('[data-scene]');
     if (sc) { runScene(sc.getAttribute('data-scene')); return; }
     var xt = t.closest('[data-extend]');
@@ -3169,8 +3341,9 @@
       return;
     }
     if (t.closest('#joinReset')) {
-      /* 프로토타입 도구 — 앱 계정 · 소속 · 세션을 지우고 데모 계정으로 (72차) */
+      /* 프로토타입 도구 — 앱 계정 · 소속 · 세션을 지우고 데모 계정으로 (72차) · 본 주의사항 기록도 (85차) */
       A.reset(); signIn(A.userById(A.DEMO_ID)); loginMode = 'pick'; joinAfter = null;
+      try { localStorage.removeItem(CAUTION_KEY); } catch (err) {}
       goRoot();
       toast('앱 계정을 처음 상태로 돌렸어요');
       return;
@@ -3204,7 +3377,11 @@
       if (k === 'id' || k === 'spec' || k === 'gray') TOOL[k] = v === 'on';
       else TOOL[k] = v;
 
-      if (k === 'home') { if (!applyHomeMode(v)) toast('홈 상태는 대양씨아이에스 데이터에서만 바뀌어요'); }
+      if (k === 'home') {
+        if (!applyHomeMode(v)) toast('홈 상태는 대양씨아이에스 데이터에서만 바뀌어요');
+        /* 입실 전으로 되돌린 예약은 주의사항도 아직 안 본 것 — 다시 체크인하면 시트가 열린다 (85차) */
+        else if (v !== 'live') forgetCaution('RSV-3301');
+      }
       else if (k === 'dev') applyDeviceMode(v);
       else if (k === 'reader') readerMode = v;
       else if (k === 'brand') M.branding.headerVariant = v;
@@ -3258,6 +3435,37 @@
       M.notifySettings = F.readNotify(activeCos());
       if (stack[stack.length - 1] === 'S-20') renderNotifySet();
     });
+    /* 관리자가 web 「공지」에서 저장하면 홈 공지 줄 · 제어 페이지 줄 · 열린 안내 시트가 그 자리에서 바뀐다 (85차 · 87차 siot.mr.notices.v1) */
+    function refreshNotices() {
+      if (!user || !hasCo()) return;
+      var top = stack[stack.length - 1];
+      if (top === 'S-05') renderHome();
+      else if (top === 'S-06') renderFind();   /* 펼친 줄의 「공지」 한 줄 (88차) */
+      else if (top === 'S-14') renderControl();
+      if (!infoSheet || !isSheetOpen()) return;
+      if (infoSheet === 'home') {
+        if (F.commonNotices().length) { $('#sheetTitle').textContent = homeNoticesTitle(); $('#sheetBody').innerHTML = homeNoticesBody(); }
+        else closeSheet();
+      }
+      else if (infoSheet === 'book') {
+        var bns = bookSheetAt ? F.bookNotes(bookSheetAt.id, bookSheetAt.day) : [];
+        if (bns.length) { $('#sheetTitle').textContent = bookNoticesTitle(bns); $('#sheetBody').innerHTML = bookNoticesBody(bns); }
+        else closeSheet();
+      }
+      else if (ctlTarget) { var ib = ctlInfoBody(ctlTarget.spaceId); if (ib) $('#sheetBody').innerHTML = ib; else closeSheet(); }
+    }
+    window.addEventListener('storage', function (e) {
+      if (e.key === F.NOTICE_KEY) refreshNotices();
+    });
+    /* 공지 미리보기 — 관리자 web(같은 origin)이 보낸 목록으로 바꿔 그린다 · notices가 배열이 아니면 저장소 값으로 (87차) */
+    if (NOTICE_PREVIEW) {
+      window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (e.origin !== location.origin || !d || d.type !== 'notice-preview') return;
+        F.previewNotices(Array.isArray(d.notices) ? d.notices : null);
+        refreshNotices();
+      });
+    }
     /* 관리자 web 회원(A-05)에서 승인 · 반려 · 퇴사 처리하거나, 설정(A-08)에서 부서 · 직급 · 회사코드를 바꾸면 그 자리에서 바뀐다.
        storage 이벤트는 「다른 탭이 바꿨을 때」만 오므로 자기 변경과 부딪히지 않는다 (72차) */
     var syncTimer = null;
